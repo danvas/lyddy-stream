@@ -14,12 +14,10 @@ const firebaseConfig = {
 
 
 // export const provider = new firebase.auth.GoogleAuthProvider();
-// export const auth = firebase.auth();
+// export const auth = firebase.auth(); 
 
 const firebaseApp = firebase.initializeApp(firebaseConfig)
 export const database = firebaseApp.database().ref()
-
-const todosDatabase = database.child('todos')
-const songsDatabase = database.child('songs')
-export const todosRef = todosDatabase
-export const songsRef = songsDatabase
+export const postsDatabase = database.child('posts')
+export const todosDatabase = database.child('todos')
+export const songsDatabase = database.child('songs')
