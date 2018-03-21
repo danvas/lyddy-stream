@@ -1,0 +1,22 @@
+import { connect } from 'react-redux'
+import { skipLyd, togglePlay } from '../actions/PlayerActions' 
+import { MainPlayer as Player } from '../components/LydPlayers'
+import React from 'react'
+
+
+
+const mapStateToProps = state => ({
+  lyd: state.posts[state.player.currentId],
+  isPlaying: state.player.playing
+})
+ 
+const mapDispatchToProps = (dispatch, ownProps) => ({
+  onTogglePlay: () => dispatch(togglePlay(ownProps.lydId)),
+  onBack: () => dispatch(skipLyd(-1)),
+  onNext: () => dispatch(skipLyd(1))
+})
+ 
+export const MainPlayer = connect(
+  mapStateToProps,
+  mapDispatchToProps
+)(Player)

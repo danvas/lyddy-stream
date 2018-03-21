@@ -19,5 +19,5 @@ const firebaseConfig = {
 const firebaseApp = firebase.initializeApp(firebaseConfig)
 export const database = firebaseApp.database().ref()
 export const postsDatabase = database.child('posts')
-export const todosDatabase = database.child('todos')
-export const songsDatabase = database.child('songs')
+export const usersDatabase = database.child('users')
+export const lyddiesDatabase = database.child('lyddies');

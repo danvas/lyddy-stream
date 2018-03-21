@@ -1,21 +1,159 @@
-import { postsDatabase } from '../Firebase';
+import { database, lyddiesDatabase } from '../Firebase';
+import { updateQueue } from './PlayerActions'
+import _ from 'lodash';
 export const FETCH_POSTS = 'fetch_posts';
 
-export function fetchPosts() {
-    return dispatch => {
-        postsDatabase.on('value', snap => {
-            dispatch({
-                type: FETCH_POSTS,
-                payload: snap.val()
-            })
-        })
+const CURRENT_USER_ID = "F7G80ZQ0QffjiWtHT51tU8ztHRq1"
+
+export function fetchPosts(subreddit) {
+  // Thunk middleware knows how to handle functions.
+  // It passes the dispatch method as an argument to the function,
+  // thus making it able to dispatch actions itself.
+ 
+  return dispatch => {
+    // First dispatch: the app state is updated to inform
+    // that the API call is starting.
+    // dispatch(requestPosts(subreddit))
+    // console.log("requestPosts(subreddit)...")
+    lyddiesDatabase.on('value', 
+                        snap => {
+
+                            const posts = getPublicLyds(snap.val(), CURRENT_USER_ID) 
+
+                            dispatch({
+                                type: FETCH_POSTS,
+                                payload: posts
+                            });
+                            dispatch(updateQueue(Object.keys(posts).reverse()))
+                            // dispatch({
+                            //     type: 'update_queue',
+                            //     queuedIds: Object.keys(posts)
+                            // })
+                            // Here, we update the app state with the results of the API call.
+                            // dispatch(receivePosts(subreddit, json))
+                            console.log("receivePosts(subreddit, json)...")
+                        },
+                        error => console.log('An error occurred.', error)
+                        );
     }
 }
-
+/*NOTE on on
+/*
+var ref = firebase.database().ref("users/ada");
+ref.once("value")
+  .then( snap => {
+    var key = snap.key; // "ada"
+    var childKey = snap.child("name/last").key; // "last"
+  });
+*/
 export function savePost(values) {
-    return dispatch => postsDatabase.push(values);
+    return dispatch => lyddiesDatabase.push(values); //FIXME: Must update queuedIds with new id!!        
 }
 
 export function deletePost(id) {
-    return dispatch => postsDatabase.child(id).remove();
+    return dispatch => lyddiesDatabase.child(id).remove();
 }
+
+export function getPublicLyds(posts, userId) {
+    return _.pickBy(posts, 
+        post => post.public && userId === post.user_id);
+}
+// For console...
+/*
+new Firebase("https://gimmesound-362aa.firebaseio.com").once('value', 
+    function(s) { console.log(JSON.stringify(s.val())); }, console.error)
+*/
+export const SELECT_SUBREDDIT = 'SELECT_SUBREDDIT' 
+export function selectSubreddit(subreddit) {
+  return {
+    type: SELECT_SUBREDDIT,
+    subreddit
+  }
+}
+
+export const INVALIDATE_SUBREDDIT = 'INVALIDATE_SUBREDDIT'
+export function invalidateSubreddit(subreddit) {
+  return {
+    type: INVALIDATE_SUBREDDIT,
+    subreddit
+  }
+}
+
+export const REQUEST_POSTS = 'REQUEST_POSTS'
+function requestPosts(subreddit) {
+  return {
+    type: REQUEST_POSTS,
+    subreddit
+  }
+}
+ 
+export const RECEIVE_POSTS = 'RECEIVE_POSTS'
+function receivePosts(subreddit, json) {
+  return {
+    type: RECEIVE_POSTS,
+    subreddit,
+    posts: json.data.children.map(child => child.data),
+    receivedAt: Date.now()
+  }
+}
+
+
+ 
+// Meet our first thunk action creator!
+// Though its insides are different, you would use it just like any other action creator:
+// store.dispatch(fetchPosts('reactjs'))
+ 
+export function _fetchPosts(subreddit) {
+  // Thunk middleware knows how to handle functions.
+  // It passes the dispatch method as an argument to the function,
+  // thus making it able to dispatch actions itself.
+ 
+  return function (dispatch) {
+    // First dispatch: the app state is updated to inform
+    // that the API call is starting.
+ 
+    dispatch(requestPosts(subreddit))
+ 
+    // The function called by the thunk middleware can return a value,
+    // that is passed on as the return value of the dispatch method.
+ 
+    // In this case, we return a promise to wait for.
+    // This is not required by thunk middleware, but it is convenient for us.
+ 
+    return fetch(`https://www.reddit.com/r/${subreddit}.json`)
+      .then(
+        response => response.json(),
+        // Do not use catch, because that will also catch
+        // any errors in the dispatch and resulting render,
+        // causing a loop of 'Unexpected batch number' errors.
+        // https://github.com/facebook/react/issues/6895
+        error => console.log('An error occurred.', error)
+      )
+      .then(json =>
+        // We can dispatch many times!
+        // Here, we update the app state with the results of the API call.
+ 
+        dispatch(receivePosts(subreddit, json))
+      )
+  }
+}
+
+function shouldFetchPosts(state, channel) {
+  const posts = state.postsByChannel[channel]
+  if (!posts) {
+    return true
+  } else if (posts.isFetching) {
+    return false
+  } else {
+    return posts.didInvalidate
+  }
+}
+
+ 
+export function fetchPostsIfNeeded(channel) {
+  return (dispatch, getState) => {
+    if (shouldFetchPosts(getState(), channel)) {
+      return dispatch(fetchPosts(channel))
+    }
+  }
+} 
