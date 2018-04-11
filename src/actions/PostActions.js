@@ -54,9 +54,9 @@ export function deletePost(id) {
     return dispatch => lyddiesDatabase.child(id).remove();
 }
 
-export function getPublicLyds(posts, userId) {
+export function getPublicLyds(posts) {
     return _.pickBy(posts, 
-        post => post.public && userId === post.user_id);
+        post => post.public);
 }
 // For console...
 /*

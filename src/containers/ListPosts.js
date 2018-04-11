@@ -1,15 +1,15 @@
 import React, { Component } from 'react';
-import './App.css';
 import _ from 'lodash';
 import { connect } from 'react-redux';
+import { getUser, logOut } from '../actions/UserActions'
 import { fetchPosts, 
          savePost,
-         deletePost } from './actions/PostActions';
+         deletePost } from '../actions/PostActions';
 import { togglePlay, 
-         updateQueue} from './actions/PlayerActions';
+         updateQueue} from '../actions/PlayerActions';
 import { Field, reduxForm, reset } from 'redux-form';
-import LydItem from './components/LydItem';
-import { MainPlayer } from './containers/PlayerContainer' 
+import LydItem from '../components/LydItem';
+import { MainPlayer } from './PlayerContainer' 
 import ReactPlayer from 'react-player'
 
 var moment = require('moment');
@@ -54,9 +54,24 @@ class App extends Component {
     super(props);
     console.log("constructor()")
   }
+  componentWillReceiveProps(nextProps) {
+    console.log(`componentWillReceiveProps(${nextProps})`)
+    const { history } = this.props;
+    const { user } = nextProps;
+    getUser();
+    if (!user.loading && user.email === undefined) {
+        history.replace('/login');
+    }
+  }
 
   componentWillMount() {
     console.log("componentWillMount()")
+    const { getUser, user, history } = this.props;
+    getUser();
+    if (!user.loading && user.email === undefined) {
+        history.replace('/login');
+    }
+
   }
 
   componentDidMount() {
@@ -69,26 +84,21 @@ class App extends Component {
     // console.log(this.props.player)
     const queuedIds = this.props.player.queuedIds
     let isPlaying = false
-    let post = {}
+    let lyd = {}
 
     
     return _.map(queuedIds, key => {
-      post = this.props.posts[key];
+      lyd = this.props.posts[key];
       isPlaying = (this.props.player.currentId === key)? 
         this.props.player.playing : false
 
       return (
-        <div key={key}>
-          <LydItem onClick={() => {this.props.togglePlay(key)}}
+          <LydItem key={key}
+                   onTogglePlay={() => this.props.togglePlay(key)}
                    playing={isPlaying}
-                   {...post} 
+                   onDelete={() => this.props.deletePost(key)}
+                   {...lyd} 
           />
-          <button 
-            onClick={()=>{ this.props.deletePost(key) }}
-          >delete</button>
-          <hr></hr>
-        </div>
-
       )
     })
   }
@@ -117,9 +127,11 @@ class App extends Component {
 
     return (
       <div>
-
-      <div>
-        <MainPlayer lyd={currentLyd} lydId={currentId}/>
+        <div>
+          <button onClick={() => {this.props.logOut()}}>Log out</button>
+        </div>
+        <div>
+          <MainPlayer lyd={currentLyd} lydId={currentId}/>
         </div>
         {this.renderPosts()}
         <div>
@@ -147,8 +159,9 @@ class App extends Component {
   }
 }
 
-const mapStateToProps = state => {
+const mapStateToProps = (state, ownProps) => {
   return {
+    user: state.user,
     posts: state.posts, 
     player: state.player,
     items: state.items,
@@ -163,7 +176,9 @@ let form = reduxForm({
 
 form = connect(
    mapStateToProps, 
-  { fetchPosts,
+  { getUser,
+    logOut,
+    fetchPosts,
     savePost,
     deletePost,
     togglePlay

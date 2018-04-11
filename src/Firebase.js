@@ -21,3 +21,5 @@ export const database = firebaseApp.database().ref()
 export const postsDatabase = database.child('posts')
 export const usersDatabase = database.child('users')
 export const lyddiesDatabase = database.child('lyddies');
+
+export const auth = firebase.auth();

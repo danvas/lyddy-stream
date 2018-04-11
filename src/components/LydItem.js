@@ -21,14 +21,16 @@ export const DateAdded = ({ datetime }) => {
 
 const LydItem = props => {
       return (
-        <div>
+        <div key={props.key}>
           <h3>{props.name}</h3>
           <ArtistNames artists={props.artists} delimiter={', '} />
           <p>{props.caption}</p>
           <HashTagsList hashtags={props.hashtags} />
-          <button onClick={props.onClick}>{props.playing ? 'Pause' : 'Play'}</button>
+          <button onClick={props.onTogglePlay}>{props.playing ? 'Pause' : 'Play'}</button>
           <a href={props.source} target="_blank">source</a>
           <DateAdded datetime={props.date_added} />
+          <button onClick={props.onDelete}>delete</button>
+          <hr></hr>
         </div>
       );
 }
