@@ -1,11 +1,11 @@
-import { database, lyddiesDatabase } from '../Firebase';
+import { usersDatabase, lyddiesDatabase } from '../Firebase';
 import { updateQueue } from './PlayerActions'
 import _ from 'lodash';
 export const FETCH_POSTS = 'fetch_posts';
 
 const CURRENT_USER_ID = "F7G80ZQ0QffjiWtHT51tU8ztHRq1"
 
-export function fetchPosts(subreddit) {
+export function fetchPosts(userId) {
   // Thunk middleware knows how to handle functions.
   // It passes the dispatch method as an argument to the function,
   // thus making it able to dispatch actions itself.
@@ -54,7 +54,7 @@ export function deletePost(id) {
     return dispatch => lyddiesDatabase.child(id).remove();
 }
 
-export function getPublicLyds(posts) {
+export function getPublicLyds(posts, user) {
     return _.pickBy(posts, 
         post => post.public);
 }

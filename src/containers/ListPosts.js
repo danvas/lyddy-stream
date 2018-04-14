@@ -34,12 +34,11 @@ const parseFieldValues = values => {
     }
 
     const newPost = {
-        user_id: "F7G80ZQ0QffjiWtHT51tU8ztHRq1",
         source: values.url,
         name,
         artists,
         caption: "",
-        "hashtags":[""],
+        hashtags: [""],
         date_added: moment().format(),
         liked_by: [""],
         public: true,
@@ -66,18 +65,16 @@ class App extends Component {
 
   componentWillMount() {
     console.log("componentWillMount()")
-    const { getUser, user, history } = this.props;
+    const { getUser, user, fetchPosts, history } = this.props;
     getUser();
+    fetchPosts(user.uid);
     if (!user.loading && user.email === undefined) {
         history.replace('/login');
     }
-
   }
 
   componentDidMount() {
     console.log("componentDidMount()")
-    const { dispatch, fetchPosts } = this.props
-    fetchPosts();
   }
 
   renderPosts() {
@@ -87,16 +84,16 @@ class App extends Component {
     let lyd = {}
 
     
-    return _.map(queuedIds, key => {
-      lyd = this.props.posts[key];
-      isPlaying = (this.props.player.currentId === key)? 
+    return _.map(queuedIds, lydId => {
+      lyd = this.props.posts[lydId];
+      isPlaying = (this.props.player.currentId === lydId)? 
         this.props.player.playing : false
 
       return (
-          <LydItem key={key}
-                   onTogglePlay={() => this.props.togglePlay(key)}
+          <LydItem key={lydId}
+                   onTogglePlay={() => this.props.togglePlay(lydId)}
                    playing={isPlaying}
-                   onDelete={() => this.props.deletePost(key)}
+                   onDelete={() => this.props.deletePost(lydId)}
                    {...lyd} 
           />
       )
@@ -113,8 +110,12 @@ class App extends Component {
   }
 
   onSubmit(values) {
-    const { dispatch } = this.props;
+    const { dispatch, getUser, user } = this.props;
     const newPost = parseFieldValues(values)
+    if (!user.uid){
+      getUser();  
+    } 
+    newPost.user_id = user.uid
     this.props.savePost(newPost).then(dispatch(reset('NewPost')))
   }
 

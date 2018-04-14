@@ -64,7 +64,7 @@ const structure = {
         queuedLyds: []},
 
     posts: {"-L-jsNBCJhPN2zB9YLR7": {
-        "added_by":"F7G80ZQ0QffjiWtHT51tU8ztHRq1",
+        "user_id":"F7G80ZQ0QffjiWtHT51tU8ztHRq1",
         "public": true,
         "artists":["Brian Eno",
         "Kevin Shields"],
@@ -75,7 +75,7 @@ const structure = {
         "name":"Only Once Away My Son",
         "source":"https://www.youtube.com/watch?v=HJlmCtpOfNU"},
     "-L-pDMLDpSMd1dobJpA2": {
-        "added_by":"F7G80ZQ0QffjiWtHT51tU8ztHRq1",
+        "user_id":"F7G80ZQ0QffjiWtHT51tU8ztHRq1",
         "public": true,
         "artists":["Laid Back"],
         "date_added":"2017-12-08T00:24:06-08:00",
@@ -83,7 +83,7 @@ const structure = {
         "name":"Fly Away/Walking In The Sunshine",
         "source":"https://www.youtube.com/watch?v=2yHrF_fSy24"},
     "-L86Q_Z_aNzez95j3AdF": {
-        "added_by":"F7G80ZQ0QffjiWtHT51tU8ztHRq1",
+        "user_id":"F7G80ZQ0QffjiWtHT51tU8ztHRq1",
         "public": true,
         "artists":["Nino Soprano"],
         "caption":"",
