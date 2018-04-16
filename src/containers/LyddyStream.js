@@ -18,28 +18,28 @@ class LyddyStream extends Component {
   }
 
   componentDidMount() {
-    const { dispatch, selectedSubreddit } = this.props
-    dispatch(fetchPostsIfNeeded(selectedSubreddit))
+    const { selectedSubreddit, fetchPosts } = this.props
+    fetchPosts(selectedSubreddit)
   }
 
   componentDidUpdate(prevProps) {
     if (this.props.selectedSubreddit !== prevProps.selectedSubreddit) {
-      const { dispatch, selectedSubreddit } = this.props
-      dispatch(fetchPostsIfNeeded(selectedSubreddit))
+      const { selectedSubreddit, fetchPosts } = this.props
+      fetchPosts(selectedSubreddit)
     }
   }
 
   handleChange(nextSubreddit) {
-    this.props.dispatch(selectSubreddit(nextSubreddit))
-    this.props.dispatch(fetchPostsIfNeeded(nextSubreddit))
+    const { selectSubreddit, fetchPosts } = this.props
+    selectSubreddit(nextSubreddit)
+    fetchPosts(nextSubreddit)
   }
 
   handleRefreshClick(e) {
     e.preventDefault()
-
-    const { dispatch, selectedSubreddit } = this.props
-    dispatch(invalidateSubreddit(selectedSubreddit))
-    dispatch(fetchPostsIfNeeded(selectedSubreddit))
+    const { selectedSubreddit, fetchPosts, invalidateSubreddit } = this.props
+    invalidateSubreddit(selectedSubreddit)
+    fetchPosts(selectedSubreddit)
   }
 
   render() {
@@ -79,7 +79,6 @@ LyddyStream.propTypes = {
   posts: PropTypes.array.isRequired,
   isFetching: PropTypes.bool.isRequired,
   lastUpdated: PropTypes.number,
-  dispatch: PropTypes.func.isRequired
 }
 
 function mapStateToProps(state) {
@@ -101,4 +100,10 @@ function mapStateToProps(state) {
   }
 }
 
-export default connect(mapStateToProps)(LyddyStream)
+const mapDispatchToProps = dispatch => ({
+  fetchPosts: subreddit => dispatch(fetchPostsIfNeeded(subreddit)),
+  selectSubreddit: subreddit => dispatch(selectSubreddit(subreddit)),
+  invalidateSubreddit: subreddit => dispatch(invalidateSubreddit(subreddit))
+})
+
+export default connect(mapStateToProps, mapDispatchToProps)(LyddyStream)
