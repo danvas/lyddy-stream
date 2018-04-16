@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 import ListPosts from './containers/ListPosts';
+import LyddyStream from './containers/LyddyStream';
 import registerServiceWorker from './registerServiceWorker';
 import { logger } from 'redux-logger'
 import { applyMiddleware, createStore } from 'redux';
@@ -20,7 +21,7 @@ ReactDOM.render(
             <Switch>
                 <Route path="/login" component={Login} />
                 <Route path="/create-account" component={CreateAccount} />
-                <Route path="/" component={ListPosts} />
+                <Route path="/" component={LyddyStream} />
             </Switch>
         </BrowserRouter>
     </Provider>, 

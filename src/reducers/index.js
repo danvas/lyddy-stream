@@ -70,12 +70,12 @@ function postsBySubreddit(state = {}, action) {
 }
 
 const rootReducer = combineReducers({
-    posts: postReducer,
+    // posts: postReducer,
     form: formReducer,
     player: playerReducer,
     user: UserReducer,
-    // postsBySubreddit,
-    // selectedSubreddit
+    postsBySubreddit,
+    selectedSubreddit
 })
 
 export default rootReducer;
