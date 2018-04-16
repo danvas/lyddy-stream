@@ -6,6 +6,7 @@ import {
   fetchPostsIfNeeded,
   invalidateSubreddit
 } from '../actions'
+import { getUser, logOut } from '../actions/UserActions'
 import Picker from '../components/Picker'
 import Posts from '../components/Posts';
 import SourceSubmitter from '../containers/SourceSubmitter'
@@ -15,6 +16,25 @@ class LyddyStream extends Component {
     super(props)
     this.handleChange = this.handleChange.bind(this)
     this.handleRefreshClick = this.handleRefreshClick.bind(this)
+  }
+
+  componentWillReceiveProps(nextProps) {
+    console.log(`componentWillReceiveProps(${nextProps})`)
+    const { history } = this.props;
+    const { user } = nextProps;
+    getUser();
+    if (!user.loading && user.email === undefined) {
+        history.replace('/login');
+    }
+  }
+  
+  componentWillMount() {
+    console.log("componentWillMount()")
+    const { getUser, user, history } = this.props;
+    getUser();
+    if (!user.loading && user.email === undefined) {
+        history.replace('/login');
+    }
   }
 
   componentDidMount() {
@@ -82,7 +102,7 @@ LyddyStream.propTypes = {
 }
 
 function mapStateToProps(state) {
-  const { selectedSubreddit, postsBySubreddit } = state
+  const { selectedSubreddit, postsBySubreddit, user } = state
   const {
     isFetching,
     lastUpdated,
@@ -93,6 +113,7 @@ function mapStateToProps(state) {
   }
 
   return {
+    user,
     selectedSubreddit,
     posts,
     isFetching,
@@ -103,7 +124,8 @@ function mapStateToProps(state) {
 const mapDispatchToProps = dispatch => ({
   fetchPosts: subreddit => dispatch(fetchPostsIfNeeded(subreddit)),
   selectSubreddit: subreddit => dispatch(selectSubreddit(subreddit)),
-  invalidateSubreddit: subreddit => dispatch(invalidateSubreddit(subreddit))
+  invalidateSubreddit: subreddit => dispatch(invalidateSubreddit(subreddit)),
+  getUser
 })
 
 export default connect(mapStateToProps, mapDispatchToProps)(LyddyStream)
