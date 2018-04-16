@@ -8,6 +8,8 @@ import {
 } from '../actions'
 import Picker from '../components/Picker'
 import Posts from '../components/Posts';
+import SourceSubmitter from '../containers/SourceSubmitter'
+
 class LyddyStream extends Component {
   constructor(props) {
     super(props)
@@ -60,6 +62,7 @@ class LyddyStream extends Component {
               Refresh
             </a>}
         </p>
+        <SourceSubmitter/>
         {isFetching && posts.length === 0 && <h2>Loading...</h2>}
         {!isFetching && posts.length === 0 && <h2>Empty.</h2>}
         {posts.length > 0 &&
