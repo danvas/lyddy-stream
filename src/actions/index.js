@@ -2,6 +2,7 @@ export const REQUEST_POSTS = 'REQUEST_POSTS'
 export const RECEIVE_POSTS = 'RECEIVE_POSTS'
 export const SELECT_SUBREDDIT = 'SELECT_SUBREDDIT'
 export const INVALIDATE_SUBREDDIT = 'INVALIDATE_SUBREDDIT'
+export const HANDLE_FETCH_ERROR = 'HANDLE_FETCH_ERROR'
 
 export function selectSubreddit(subreddit) {
   return {
@@ -33,12 +34,22 @@ function receivePosts(subreddit, json) {
   }
 }
 
+function handleFetchError(subreddit, error) {
+  return {
+    type: HANDLE_FETCH_ERROR,
+    subreddit,
+    posts: {},
+    receivedAt: Date.now()
+  }
+}
+
 function fetchPosts(subreddit) {
   return dispatch => {
     dispatch(requestPosts(subreddit))
     return fetch(`https://www.reddit.com/r/${subreddit}.json`)
       .then(response => response.json())
       .then(json => dispatch(receivePosts(subreddit, json)))
+      .catch(error => dispatch(handleFetchError(subreddit, error)))
   }
 }
 
