@@ -66,11 +66,12 @@ class LyddyStream extends Component {
     const { selectedSubreddit, posts, isFetching, lastUpdated } = this.props
     return (
       <div>
-        <Picker
-          value={selectedSubreddit}
-          onChange={this.handleChange}
-          options={['reactjs', 'frontend', 'home', 'nielvas']}
-        />
+       <button onClick={logOut()}>Log out</button>
+       <Picker
+         value={selectedSubreddit}
+         onChange={this.handleChange}
+         options={['reactjs', 'frontend', 'home', 'nielvas', 'nielvas/playlists/someOther']}
+       />
         <p>
           {lastUpdated &&
             <span>

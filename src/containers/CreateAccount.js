@@ -3,7 +3,7 @@ import InputField from '../components/InputField'
 import FooterFormButton from '../components/FooterFormButton'
 import SimpleBox from '../components/SimpleBox'
 import ErrorAlert from '../components/ErrorAlert'
-import { createAccount } from '../actions/UserActions'
+import { createAccount, setUser } from '../actions/UserActions'
 import { connect } from 'react-redux';
 
 class CreateAccount extends Component {
@@ -40,7 +40,8 @@ class CreateAccount extends Component {
         if (!this.isValid()) {
             return;
         }
-        this.props.createAccount(this.state.email, this.state.password).then( () => {
+        this.props.createAccount(this.state.email, this.state.password).then( newUser => {
+            setUser(newUser.uid)
             this.props.history.replace('/');
         }).catch(err => {
             this.setState({ error: err.message })});
