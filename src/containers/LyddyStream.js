@@ -17,9 +17,8 @@ class LyddyStream extends Component {
     this.handleChange = this.handleChange.bind(this)
     this.handleRefreshClick = this.handleRefreshClick.bind(this)
   }
-
+  
   componentWillReceiveProps(nextProps) {
-    console.log(`componentWillReceiveProps(${nextProps})`)
     const { history } = this.props;
     const { user } = nextProps;
     getUser();
@@ -27,10 +26,9 @@ class LyddyStream extends Component {
         history.replace('/login');
     }
   }
-  
+
   componentWillMount() {
-    console.log("componentWillMount()")
-    const { getUser, user, history } = this.props;
+    const { user, history } = this.props;
     getUser();
     if (!user.loading && user.email === undefined) {
         history.replace('/login');
@@ -38,7 +36,9 @@ class LyddyStream extends Component {
   }
 
   componentDidMount() {
-    const { selectedSubreddit, fetchPosts } = this.props
+    const { selectedSubreddit, fetchPosts, match } = this.props
+    const userAlias = match.params.user_alias
+    const playlist = match.params.playlist
     fetchPosts(selectedSubreddit)
   }
 
@@ -50,9 +50,10 @@ class LyddyStream extends Component {
   }
 
   handleChange(nextSubreddit) {
-    const { selectSubreddit, fetchPosts } = this.props
+    const { selectSubreddit, fetchPosts, history } = this.props
     selectSubreddit(nextSubreddit)
     fetchPosts(nextSubreddit)
+    history.replace(`/${nextSubreddit}`);
   }
 
   handleRefreshClick(e) {
