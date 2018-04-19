@@ -2,6 +2,7 @@ import { auth, usersDatabase }  from '../Firebase';
 
 export const GET_USER = 'GET_USER';
 export const SET_USER_DATA = 'SET_USER_DATA'
+export const RECEIVE_USER_DATA = 'RECEIVE_USER_DATA'
 
 export function getUser() {
     return dispatch => {
@@ -14,6 +15,7 @@ export function getUser() {
                 if (user){
                     dispatch(fetchUserData(user.uid))
                 }
+                
             },
             error => {console.log(error)}
         )
@@ -23,6 +25,13 @@ export function getUser() {
 function setUserData(userData) {
   return {
     type: SET_USER_DATA,
+    userData
+  }
+}
+
+function receiveUserData(userData) {
+  return {
+    type: RECEIVE_USER_DATA,
     userData
   }
 }
@@ -62,11 +71,12 @@ function shouldFetchUserData(state, userId) {
 }
 
 function fetchUserData(userId) {
-    const userRef = usersDatabase.child(userId);
+  const userRef = usersDatabase.child(userId);
   return dispatch => {
-    return userRef.once('value')
-      .then(snap => dispatch(setUserData(snap.val())))
-      .catch(error => console.log(error))
+    userRef.on('value',
+        snap => dispatch(receiveUserData(snap.val())),
+        error => console.log(error)
+    )
   }
 }
 
