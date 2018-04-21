@@ -1,4 +1,5 @@
 import { usersDatabase, lyddiesDatabase } from '../Firebase';
+import { reset } from 'redux-form';
 import { updateQueue } from './PlayerActions'
 import _ from 'lodash';
 export const FETCH_POSTS = 'fetch_posts';
@@ -47,7 +48,12 @@ ref.once("value")
   });
 */
 export function savePost(values) {
-    return dispatch => lyddiesDatabase.push(values); //FIXME: Must update queuedIds with new id!!        
+    return dispatch => {
+        const newPostRef = lyddiesDatabase.push(values)
+        console.log(newPostRef.key)
+        newPostRef.update({lyd_id: newPostRef.key})
+        dispatch(reset('NewPost'))
+    }     
 }
 
 export function deletePost(id) {

@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
-import { reduxForm, reset } from 'redux-form';
+import { reduxForm } from 'redux-form';
 import { savePost } from '../actions/PostActions';
 import { getUser } from '../actions/UserActions';
 import UrlSourceForm from '../components/UrlSourceForm';
@@ -14,7 +14,7 @@ const parseFieldValues = values => {
     if (!artists){
       const names = values.name.split('-');
       name = names[1].trim()
-      artists = [names[0]]
+      artists = [names[0].trim()]
     } else {
       artists = values.artists.split(',')
     }
@@ -51,7 +51,7 @@ class SourceSubmitter extends Component {
         const { dispatch, user, savePost } = this.props;
         const newPost = parseFieldValues(values)
         newPost.user_id = user.uid
-        savePost(newPost).then(dispatch(reset('NewPost')))
+        savePost(newPost)
     }
 
     render() {

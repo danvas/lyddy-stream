@@ -7,7 +7,9 @@ import UserReducer from './UserReducer'
 import {
   SELECT_SUBREDDIT,
   INVALIDATE_SUBREDDIT,
+  REQUEST_LYD_POSTS,
   REQUEST_POSTS,
+  RECEIVE_LYD_POSTS,
   RECEIVE_POSTS,
   HANDLE_FETCH_ERROR
 } from '../actions'
@@ -38,10 +40,22 @@ function posts(
       return Object.assign({}, state, {
         didInvalidate: true
       })
+    case REQUEST_LYD_POSTS:
+      return Object.assign({}, state, {
+        isFetching: true,
+        didInvalidate: false
+      })
     case REQUEST_POSTS:
       return Object.assign({}, state, {
         isFetching: true,
         didInvalidate: false
+      })
+    case RECEIVE_LYD_POSTS:
+      return Object.assign({}, state, {
+        isFetching: false,
+        didInvalidate: false,
+        items: action.posts,
+        lastUpdated: action.receivedAt
       })
     case RECEIVE_POSTS:
       return Object.assign({}, state, {
@@ -59,7 +73,9 @@ function postsBySubreddit(state = {}, action) {
   switch (action.type) {
     case HANDLE_FETCH_ERROR:
     case INVALIDATE_SUBREDDIT:
+    case RECEIVE_LYD_POSTS:
     case RECEIVE_POSTS:
+    case REQUEST_LYD_POSTS:
     case REQUEST_POSTS:
       return Object.assign({}, state, {
         [action.subreddit]: posts(state[action.subreddit], action)

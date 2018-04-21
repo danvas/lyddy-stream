@@ -1,5 +1,9 @@
+import { usersDatabase, lyddiesDatabase } from '../Firebase';
+
 export const REQUEST_POSTS = 'REQUEST_POSTS'
+export const REQUEST_LYD_POSTS = 'REQUEST_LYD_POSTS'
 export const RECEIVE_POSTS = 'RECEIVE_POSTS'
+export const RECEIVE_LYD_POSTS = 'RECEIVE_LYD_POSTS'
 export const SELECT_SUBREDDIT = 'SELECT_SUBREDDIT'
 export const INVALIDATE_SUBREDDIT = 'INVALIDATE_SUBREDDIT'
 export const HANDLE_FETCH_ERROR = 'HANDLE_FETCH_ERROR'
@@ -53,6 +57,43 @@ function fetchPosts(subreddit) {
   }
 }
 
+function filterPostsByUser(userId, posts) {
+  const revPosts = Object.values(posts).reverse()
+  console.log(revPosts)
+  return revPosts.filter(post => 
+                      (userId === post.user_id) && 
+                       post.public)
+}
+
+function receiveLydPosts(userId, snapshot) {
+  return {
+    type: RECEIVE_LYD_POSTS,
+    subreddit: userId,
+    posts: filterPostsByUser(userId, snapshot),
+    receivedAt: Date.now()
+  }
+}
+function requestLydPosts(userId) {
+  return {
+    type: REQUEST_LYD_POSTS,
+    userId
+  }
+}
+
+function fetchLydPosts(userId) {
+  return dispatch => {
+    // dispatch(requestLydPosts(userId))
+    lyddiesDatabase.on('value', 
+                        snap => {
+                            const snapshot = snap.val()
+                            console.log("receiveLydPosts(userId, snapshot)...")
+                            dispatch(receiveLydPosts(userId, snapshot))
+                        },
+                        error => console.log('An error occurred.', error)
+                        );
+  }
+}
+
 function shouldFetchPosts(state, subreddit) {
   const posts = state.postsBySubreddit[subreddit]
   if (!posts) {
@@ -67,6 +108,7 @@ function shouldFetchPosts(state, subreddit) {
 export function fetchPostsIfNeeded(subreddit) {
   return (dispatch, getState) => {
     if (shouldFetchPosts(getState(), subreddit)) {
+      dispatch(fetchLydPosts("XWKhkvgF6bS5Knkg8cWT1YrJOFq1"))
       return dispatch(fetchPosts(subreddit))
     }
   }
