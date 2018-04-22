@@ -1,12 +1,18 @@
 import { usersDatabase, lyddiesDatabase } from '../Firebase';
-
+import { updateQueue } from './PlayerActions'
 export const REQUEST_POSTS = 'REQUEST_POSTS'
-export const REQUEST_LYD_POSTS = 'REQUEST_LYD_POSTS'
 export const RECEIVE_POSTS = 'RECEIVE_POSTS'
-export const RECEIVE_LYD_POSTS = 'RECEIVE_LYD_POSTS'
 export const SELECT_SUBREDDIT = 'SELECT_SUBREDDIT'
 export const INVALIDATE_SUBREDDIT = 'INVALIDATE_SUBREDDIT'
 export const HANDLE_FETCH_ERROR = 'HANDLE_FETCH_ERROR'
+var moment = require('moment')
+
+function getSortedPosts(posts) {
+  const postValues = posts? Object.values(posts) : []
+  const sortedValues = postValues.sort((a,b) => {
+    return moment(b.date_added).valueOf() - moment(a.date_added).valueOf()})
+  return sortedValues
+}
 
 export function selectSubreddit(subreddit) {
   return {
@@ -22,74 +28,47 @@ export function invalidateSubreddit(subreddit) {
   }
 }
 
-function requestPosts(subreddit) {
+function requestPosts(userId) {
   return {
     type: REQUEST_POSTS,
-    subreddit
+    userId
   }
 }
 
-function receivePosts(subreddit, json) {
-  return {
-    type: RECEIVE_POSTS,
-    subreddit,
-    posts: json.data.children.map(child => child.data),
-    receivedAt: Date.now()
-  }
-}
-
-function handleFetchError(subreddit, error) {
+function handleFetchError(userId, error) {
   return {
     type: HANDLE_FETCH_ERROR,
-    subreddit,
+    subreddit: userId,
     posts: {},
     receivedAt: Date.now()
   }
 }
 
-function fetchPosts(subreddit) {
-  return dispatch => {
-    dispatch(requestPosts(subreddit))
-    return fetch(`https://www.reddit.com/r/${subreddit}.json`)
-      .then(response => response.json())
-      .then(json => dispatch(receivePosts(subreddit, json)))
-      .catch(error => dispatch(handleFetchError(subreddit, error)))
-  }
-}
-
 function filterPostsByUser(userId, posts) {
-  const revPosts = Object.values(posts).reverse()
-  console.log(revPosts)
-  return revPosts.filter(post => 
-                      (userId === post.user_id) && 
-                       post.public)
+  return posts.filter(post => 
+                      (userId === post.user_id) && post.public)
 }
 
-function receiveLydPosts(userId, snapshot) {
+function receivePosts(userId, posts) {
   return {
-    type: RECEIVE_LYD_POSTS,
+    type: RECEIVE_POSTS,
     subreddit: userId,
-    posts: filterPostsByUser(userId, snapshot),
-    receivedAt: Date.now()
-  }
-}
-function requestLydPosts(userId) {
-  return {
-    type: REQUEST_LYD_POSTS,
-    userId
+    receivedAt: Date.now(),
+    posts
   }
 }
 
-function fetchLydPosts(userId) {
+function fetchPosts(userId) {
   return dispatch => {
-    // dispatch(requestLydPosts(userId))
+    dispatch(requestPosts(userId))
     lyddiesDatabase.on('value', 
                         snap => {
-                            const snapshot = snap.val()
-                            console.log("receiveLydPosts(userId, snapshot)...")
-                            dispatch(receiveLydPosts(userId, snapshot))
+                            const sortedPosts = getSortedPosts(snap.val())
+                            const posts = filterPostsByUser(userId, sortedPosts)
+                            dispatch(receivePosts(userId, posts))
+                            dispatch(updateQueue(posts.map(post=>post.lyd_id)))
                         },
-                        error => console.log('An error occurred.', error)
+                        error => dispatch(handleFetchError(userId, error))
                         );
   }
 }
@@ -108,8 +87,8 @@ function shouldFetchPosts(state, subreddit) {
 export function fetchPostsIfNeeded(subreddit) {
   return (dispatch, getState) => {
     if (shouldFetchPosts(getState(), subreddit)) {
-      dispatch(fetchLydPosts("XWKhkvgF6bS5Knkg8cWT1YrJOFq1"))
-      return dispatch(fetchPosts(subreddit))
+      dispatch(fetchPosts(subreddit))
     }
+    
   }
 }

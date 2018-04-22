@@ -1,9 +1,9 @@
-export const TOGGLE_PLAY = 'toggle_play';
+export const TOGGLE_PLAY = 'TOGGLE_PLAY';
 export const STOP_PLAY = 'stop_play';
 export const DEQUEUE_LYD = 'dequeue_lyd';
 export const ENQUEUE_LYD = 'enqueue_lyd';
-export const SKIP_LYD = 'skip_lyd';
-export const UPDATE_QUEUE = 'update_queue';
+export const SKIP_LYD = 'SKIP_LYD';
+export const UPDATE_QUEUE = 'UPDATE_QUEUE';
 
 export const togglePlay = currentId => {
     return {

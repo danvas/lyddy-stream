@@ -16,11 +16,9 @@ export const playerReducer = (state=defaultState, action) => {
         case TOGGLE_PLAY:
             if (action.currentId === state.currentId){
                 playing = !state.playing
-            } else if (action.currentId === null) {
+            } else if (!action.currentId) {
                 playing = false
-                currentId = ''
-            }
-            else {
+            } else {
                 playing = true
                 queueIdx = state.queuedIds.findIndex(
                     id => id === action.currentId)
@@ -54,7 +52,6 @@ export const playerReducer = (state=defaultState, action) => {
             if (!currentId) {
                 playing = false
                 queueIdx = 0
-                currentId = state.queuedIds[queueIdx]
             }
 
             return { ...state, currentId, queueIdx, playing}
@@ -62,7 +59,7 @@ export const playerReducer = (state=defaultState, action) => {
         case UPDATE_QUEUE:
             queuedIds = action.queuedIds
             queueIdx = queuedIds.findIndex(id => id === state.currentId)
-            currentId = queuedIds[queueIdx] || queuedIds[0]
+            currentId = queuedIds[queueIdx]
             
             return {...state, queuedIds, currentId}
         

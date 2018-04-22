@@ -5,10 +5,9 @@ import React from 'react'
 
 
 
-const mapStateToProps = state => ({
-  lyd: state.posts[state.player.currentId],
-  isPlaying: state.player.playing
-})
+const mapStateToProps = state => (
+  {isPlaying: state.player.playing}
+)
  
 const mapDispatchToProps = (dispatch, ownProps) => ({
   onTogglePlay: () => dispatch(togglePlay(ownProps.lydId)),
