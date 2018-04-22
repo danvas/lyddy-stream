@@ -19,7 +19,7 @@ class LyddyStream extends Component {
     this.handleChange = this.handleChange.bind(this)
     this.handleRefreshClick = this.handleRefreshClick.bind(this)
   }
-  
+
   componentWillReceiveProps(nextProps) {
     const { history } = this.props;
     const { user } = nextProps;

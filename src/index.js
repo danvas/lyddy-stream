@@ -1,7 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
-import ListPosts from './containers/ListPosts';
 import LyddyStream from './containers/LyddyStream';
 import registerServiceWorker from './registerServiceWorker';
 import { createLogger } from 'redux-logger'

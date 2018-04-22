@@ -27,7 +27,7 @@ const LydItem = props => {
           <p>{props.caption}</p>
           <HashTagsList hashtags={props.hashtags} />
           <button onClick={props.onTogglePlay}>{props.playing ? 'Pause' : 'Play'}</button>
-          {false? <a href={props.source} target="_blank">source</a> : null}
+          {false && <a href={props.source} target="_blank">source</a>}
           <DateAdded datetime={props.date_added} />
           <button onClick={props.onDelete}>delete</button>
           <hr></hr>
