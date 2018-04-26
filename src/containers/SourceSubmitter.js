@@ -52,6 +52,7 @@ class SourceSubmitter extends Component {
         const newPost = parseFieldValues(values)
         newPost.user_id = user.uid
         savePost(newPost)
+        // pushToPlaylist(newPost.lyd)
     }
 
     render() {
@@ -68,9 +69,17 @@ function mapStateToProps(state) {
     return { user: state.user }
 }
 
+const mapDispatchToProps = dispatch => ({
+  savePost: lyd => dispatch(savePost(lyd)),
+  getUser
+})
+
 let form = reduxForm({
   form: 'NewPost'
 })(SourceSubmitter)
 
-export default connect(mapStateToProps, { savePost, getUser })(form);
+export default connect(
+    mapStateToProps, 
+    { savePost, getUser }
+)(form);
 

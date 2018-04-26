@@ -1,4 +1,4 @@
-import { usersDatabase, lyddiesDatabase } from '../Firebase';
+import { auth, usersDatabase, lyddiesDatabase } from '../Firebase';
 import { updateQueue } from './PlayerActions'
 export const REQUEST_POSTS = 'REQUEST_POSTS'
 export const RECEIVE_POSTS = 'RECEIVE_POSTS'
@@ -44,9 +44,10 @@ function handleFetchError(userId, error) {
   }
 }
 
-function filterPostsByUser(userId, posts) {
+function filterPostsByUser(userIds, posts) {
   return posts.filter(post => 
-                      (userId === post.user_id) && post.public)
+                      (userIds.includes(post.user_id) && post.public)
+         )
 }
 
 function receivePosts(userId, posts) {
@@ -58,23 +59,23 @@ function receivePosts(userId, posts) {
   }
 }
 
-function fetchPosts(userId) {
+function fetchPosts(userIds) {
   return dispatch => {
-    dispatch(requestPosts(userId))
+    dispatch(requestPosts(userIds))
     lyddiesDatabase.on('value', 
                         snap => {
                             const sortedPosts = getSortedPosts(snap.val())
-                            const posts = filterPostsByUser(userId, sortedPosts)
-                            dispatch(receivePosts(userId, posts))
+                            const posts = filterPostsByUser(userIds, sortedPosts)
+                            dispatch(receivePosts(userIds[0], posts))
                             dispatch(updateQueue(posts.map(post=>post.lyd_id)))
                         },
-                        error => dispatch(handleFetchError(userId, error))
+                        error => dispatch(handleFetchError(userIds[0], error))
                         );
   }
 }
 
-function shouldFetchPosts(state, subreddit) {
-  const posts = state.postsBySubreddit[subreddit]
+function shouldFetchPosts(state, uid) {
+  const posts = state.postsBySubreddit[uid]
   if (!posts) {
     return true
   } else if (posts.isFetching) {
@@ -84,10 +85,12 @@ function shouldFetchPosts(state, subreddit) {
   }
 }
 
-export function fetchPostsIfNeeded(subreddit) {
+export function fetchPostsIfNeeded(userIds) {
   return (dispatch, getState) => {
-    if (shouldFetchPosts(getState(), subreddit)) {
-      dispatch(fetchPosts(subreddit))
+    const state = getState()
+    const uid = userIds? userIds[0] : state.user.uid
+    if (shouldFetchPosts(state, uid)) {
+      dispatch(fetchPosts(userIds))
     }
     
   }

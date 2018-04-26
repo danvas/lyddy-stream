@@ -65,11 +65,6 @@ export function setUser(userId) {
     userRef.set(userData);
 }
 
-function shouldFetchUserData(state, userId) {
-  const posts = state.user.uid
-  return true
-}
-
 function fetchUserData(userId) {
   const userRef = usersDatabase.child(userId);
   return dispatch => {
@@ -77,13 +72,5 @@ function fetchUserData(userId) {
         snap => dispatch(receiveUserData(snap.val())),
         error => console.log(error)
     )
-  }
-}
-
-export function fetchUserDataIfNeeded(userId) {
-  return (dispatch, getState) => {
-    if (shouldFetchUserData(getState(), userId)) {
-      return dispatch(fetchUserData(userId))
-    }
   }
 }

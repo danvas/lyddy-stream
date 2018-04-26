@@ -9,8 +9,8 @@ const mapStateToProps = state => (
   {isPlaying: state.player.playing}
 )
  
-const mapDispatchToProps = (dispatch, ownProps) => ({
-  onTogglePlay: () => dispatch(togglePlay(ownProps.lydId)),
+const mapDispatchToProps = (dispatch) => ({
+  onTogglePlay: (lydId) => dispatch(togglePlay(lydId)),
   onBack: () => dispatch(skipLyd(-1)),
   onNext: () => dispatch(skipLyd(1))
 })

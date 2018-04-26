@@ -7,6 +7,7 @@ import {
   invalidateSubreddit
 } from '../actions'
 import { getUser, logOut } from '../actions/UserActions'
+import { updateQueue } from '../actions/PlayerActions'
 import Picker from '../components/Picker'
 import { LydList } from '../containers/LydList'
 import Posts from '../components/Posts';
@@ -38,31 +39,41 @@ class LyddyStream extends Component {
   }
 
   componentDidMount() {
-    const { selectedSubreddit, fetchPosts, match } = this.props
+    const { selectedSubreddit, fetchPosts, match, user } = this.props
     const userAlias = match.params.user_alias
     const playlist = match.params.playlist
-    fetchPosts(selectedSubreddit)
+    let userIds = [selectedSubreddit]
+    if (user.following) {
+      userIds = userIds.concat(user.following)
+    }
+    fetchPosts(userIds)
   }
 
   componentDidUpdate(prevProps) {
     if (this.props.selectedSubreddit !== prevProps.selectedSubreddit) {
-      const { selectedSubreddit, fetchPosts } = this.props
-      fetchPosts(selectedSubreddit)
+      const { selectedSubreddit, fetchPosts, user } = this.props
+      const userIds = [selectedSubreddit].concat(user.following)
+      // console.log(userIds)
+      fetchPosts(userIds)
     }
   }
 
   handleChange(nextSubreddit) {
-    const { selectSubreddit, fetchPosts, history } = this.props
+    const { selectSubreddit, fetchPosts, history, user } = this.props
     selectSubreddit(nextSubreddit)
-    fetchPosts(nextSubreddit)
+    const userIds = [nextSubreddit].concat(user.following)
+    fetchPosts(userIds)
+    console.log(this.props)
+    // updateQueue([nextSubreddit])
     history.replace(`/${nextSubreddit}`);
   }
 
   handleRefreshClick(e) {
     e.preventDefault()
-    const { selectedSubreddit, fetchPosts, invalidateSubreddit } = this.props
+    const { selectedSubreddit, fetchPosts, invalidateSubreddit, user } = this.props
     invalidateSubreddit(selectedSubreddit)
-    fetchPosts(selectedSubreddit)
+    const userIds = [selectedSubreddit].concat(user.following)
+    fetchPosts(userIds)
   }
 
   render() {
@@ -74,7 +85,7 @@ class LyddyStream extends Component {
        <Picker
          value={selectedSubreddit}
          onChange={this.handleChange}
-         options={['reactjs', 'frontend', 'home', 'nielvas', 'F7G80ZQ0QffjiWtHT51tU8ztHRq1','nielvas/playlists/someOther', '']}
+         options={['reactjs', 'frontend', 'home', 'nielvas', 'XWKhkvgF6bS5Knkg8cWT1YrJOFq1', 'F7G80ZQ0QffjiWtHT51tU8ztHRq1','nielvas/playlists/someOther', '']}
        />
         <p>
           {lastUpdated &&
@@ -132,6 +143,7 @@ const mapDispatchToProps = dispatch => ({
   fetchPosts: subreddit => dispatch(fetchPostsIfNeeded(subreddit)),
   selectSubreddit: subreddit => dispatch(selectSubreddit(subreddit)),
   invalidateSubreddit: subreddit => dispatch(invalidateSubreddit(subreddit)),
+  updateQueue: posts => dispatch(updateQueue(posts)),
   getUser
 })
 
