@@ -17,25 +17,24 @@ import SourceSubmitter from '../containers/SourceSubmitter'
 class LyddyStream extends Component {
   constructor(props) {
     super(props)
+    this.state = {}
     this.handleChange = this.handleChange.bind(this)
     this.handleRefreshClick = this.handleRefreshClick.bind(this)
-  }
-
-  componentWillReceiveProps(nextProps) {
-    const { history } = this.props;
-    const { user } = nextProps;
-    getUser();
-    if (!user.loading && user.email === undefined) {
-        history.replace('/login');
+    if (!props.user.loading && props.user.email === undefined) {
+        props.history.replace('/login');
     }
   }
 
-  componentWillMount() {
-    const { user, history } = this.props;
-    getUser();
-    if (!user.loading && user.email === undefined) {
-        history.replace('/login');
+  static getDerivedStateFromProps(nextProps, prevState){
+    const { user, history } = nextProps
+    if (user) {
+        if (!user.loading && user.email === undefined) {
+          history.replace('/login')
+      }
+    } else {
+      getUser();
     }
+    return null
   }
 
   componentDidMount() {
@@ -63,7 +62,6 @@ class LyddyStream extends Component {
     selectSubreddit(nextSubreddit)
     const userIds = [nextSubreddit].concat(user.following)
     fetchPosts(userIds)
-    console.log(this.props)
     // updateQueue([nextSubreddit])
     history.replace(`/${nextSubreddit}`);
   }

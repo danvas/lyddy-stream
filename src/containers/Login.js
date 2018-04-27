@@ -15,17 +15,15 @@ class Login extends Component {
             password: '',
             error: ''
         }
+        props.getUser();
     }
 
-    componentWillMount() {
-        this.props.getUser();
-    }
-
-    componentWillReceiveProps(nextProps) {
-        const { user } = nextProps;
-        if (user.email !== undefined) {
-            this.props.history.push('/')
+    static getDerivedStateFromProps(nextProps, prevState){
+        const { user, history } = nextProps;
+        if (user && user.email !== undefined) {
+            history.push('/')
         }
+        return null
     }
 
     submitLogin(event) {
