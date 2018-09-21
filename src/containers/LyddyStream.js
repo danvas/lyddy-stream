@@ -1,89 +1,183 @@
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
+import _ from 'lodash'
 import {
-  selectSubreddit,
+  selectStream,
   fetchPostsIfNeeded,
-  invalidateSubreddit
+  invalidateStream
 } from '../actions'
-import { getUser, logOut } from '../actions/UserActions'
+import { handleRequestError, isLoggedIn, getUser, fetchUserData, logOut, toUserId } from '../actions/UserActions'
 import { updateQueue } from '../actions/PlayerActions'
 import Picker from '../components/Picker'
 import { LydList } from '../containers/LydList'
 import Posts from '../components/Posts';
+import PostLydModal from '../components/PostLydModal';
+import PageNotFound from '../components/PageNotFound';
 import { MainPlayer } from './PlayerContainer' 
 import SourceSubmitter from '../containers/SourceSubmitter'
-
+import { auth, usersDatabase, database }  from '../Firebase';
 class LyddyStream extends Component {
   constructor(props) {
+    console.log("LyddyStream.constructor()...")
     super(props)
-    this.state = {}
+    this.state = { postModalIsOpen: false }
+    // console.log(props)
+    const { getUserCred, user, match, getUserData } = props
     this.handleChange = this.handleChange.bind(this)
-    this.handleRefreshClick = this.handleRefreshClick.bind(this)
-    if (!props.user.loading && props.user.email === undefined) {
-        props.history.replace('/login');
-    }
+    this.handleLogout = this.handleLogout.bind(this)
+    this.handleRefreshClick = this.handleRefreshClick.bind(this) 
   }
 
-  static getDerivedStateFromProps(nextProps, prevState){
-    const { user, history } = nextProps
-    if (user) {
-        if (!user.loading && user.email === undefined) {
-          history.replace('/login')
-      }
-    } else {
-      getUser();
+  getCachedUserId = userKey => {
+    const { user, getUserData, selectStream} = this.props
+    let streamId = null
+    if (userKey in user.aliasMap){
+      streamId = user.aliasMap[userKey]
+    } else if (userKey in Object.values(user.aliasMap)) {
+      streamId = userKey
     }
-    return null
+    return streamId
   }
 
   componentDidMount() {
-    const { selectedSubreddit, fetchPosts, match, user } = this.props
-    const userAlias = match.params.user_alias
-    const playlist = match.params.playlist
-    let userIds = [selectedSubreddit]
-    if (user.following) {
-      userIds = userIds.concat(user.following)
+    console.log("LyddyStream.componentDidMOUNT()...")
+    console.log(this.props)
+    const { history, getUserData, match, selectedStream, getUserCred, fetchPosts, user } = this.props
+    if (!user.uid) {
+      getUserCred()
     }
-    fetchPosts(userIds)
+  }
+
+  getStreamUserIds = (streamKey, profiles, authUserId) => {
+    // console.log(streamKey, profiles, authUserId)
+    let userIds = []
+    let userId = streamKey || authUserId
+    // console.log(userId)
+    // console.log(!userId || Object.keys(profiles).length === 0 || !profiles[userId])
+    if (!userId || Object.keys(profiles).length === 0 || !profiles[userId]) {
+      // console.log("NADA!: ", userIds)
+      return userIds
+    }
+
+    userIds = [userId]
+    const following = profiles[userId]['following']
+    // console.log("FOLLOWING =", following)
+    if (streamKey === '') {
+      userIds = userIds.concat(Object.keys(following))
+    }
+
+    return userIds
   }
 
   componentDidUpdate(prevProps) {
-    if (this.props.selectedSubreddit !== prevProps.selectedSubreddit) {
-      const { selectedSubreddit, fetchPosts, user } = this.props
-      const userIds = [selectedSubreddit].concat(user.following)
-      // console.log(userIds)
-      fetchPosts(userIds)
+    console.log("LyddyStream.componentDidUPDATE()...")
+    // console.log(prevProps)
+    console.log(this.props)
+    const { history, userRequestError, getUserData, selectStream, selectedStream, fetchPosts, user, match } = this.props
+
+    // if (user.error['code'] === 'PERMISSION_DENIED') {
+    //   userRequestError({}) // reset error to empty
+    //   return
+    // }
+
+    const userAlias = match.params['user_alias']
+    if (userAlias) {
+      // console.log(userAlias)
+      // this.getCachedUserId(userAlias)
+      if (!user.isLoading && !(userAlias in user.aliasMap)) {
+
+        toUserId(userAlias)
+        .then(snap => {
+          const streamKey = snap.val()
+          // console.log(streamKey)
+          if (streamKey === null) {
+            throw new Error(`Alias '${userAlias}' doesn't exist`)
+          }
+          getUserData(streamKey)
+          selectStream(streamKey)
+          return streamKey
+        }, err => console.log(err))
+        // .then(streamKey => console.log("streamKey =",streamKey))
+        .catch(err => {
+          console.log(err)
+          selectStream("")
+        })
+      } else if (userAlias in user.aliasMap) {
+        console.log("alias already in cache... selecStream? ", selectedStream)
+      }
+    } else {
+      if (user.loggedIn && !user.isLoading) {
+        if (!(user.uid in user.profiles)) {
+          getUserData(user.uid)
+        }
+        selectStream("")
+      }
+    }
+    let userIds = this.getStreamUserIds(selectedStream, user.profiles, user.uid)
+
+    if (userIds.length > 0){ // Might not be needed (see `doFetch` conditional in fetchPostsIfNeeded)
+      console.log("fetch posts by: ", userIds)//.map(id=>user.profiles[id]['alias_name']))
+      fetchPosts(selectedStream, userIds)
     }
   }
 
-  handleChange(nextSubreddit) {
-    const { selectSubreddit, fetchPosts, history, user } = this.props
-    selectSubreddit(nextSubreddit)
-    const userIds = [nextSubreddit].concat(user.following)
-    fetchPosts(userIds)
-    // updateQueue([nextSubreddit])
-    history.replace(`/${nextSubreddit}`);
+  handleLogout() {
+    console.log("LyddyStream.handleLogout()...")
+    const { history, user, logOut } = this.props
+    logOut()
   }
 
+  handleChange(nextStream) {
+    console.log("LyddyStream.handleChange()...", `'${nextStream}'`)
+    const { getUserData, selectStream, fetchPosts, history, user } = this.props
+    // let userId = this.getCachedUserId(nextStream)
+    const userIds = [nextStream].concat(user.following)
+    // fetchPosts(userIds)
+    // updateQueue([nextStream])
+    let streamKey = nextStream
+    if (nextStream in user.aliasMap) {
+      streamKey = user.aliasMap[nextStream]
+    }
+    selectStream(streamKey)
+    history.replace(`/${nextStream}`);
+
+  }
+
+  refreshPosts() {
+    const { selectedStream, fetchPosts, invalidateStream, user } = this.props
+    invalidateStream(selectedStream)
+    const userIds = [selectedStream].concat(user.following)
+    // fetchPosts(userIds)
+  }
   handleRefreshClick(e) {
+    console.log("LyddyStream.handleRefreshClick()...")
     e.preventDefault()
-    const { selectedSubreddit, fetchPosts, invalidateSubreddit, user } = this.props
-    invalidateSubreddit(selectedSubreddit)
-    const userIds = [selectedSubreddit].concat(user.following)
-    fetchPosts(userIds)
+    this.refreshPosts()
+    // const { selectedStream, fetchPosts, invalidateStream, user } = this.props
+    // invalidateStream(selectedStream)
+    // const userIds = [selectedStream].concat(user.following)
+    // // fetchPosts(userIds)
+  }
+
+  toggleModal = () => {
+    this.setState({
+      postModalIsOpen: !this.state.postModalIsOpen
+    });
   }
 
   render() {
-    const { selectedSubreddit, posts, isFetching, lastUpdated, player } = this.props
+    const { selectedStream, posts, user, isFetching, lastUpdated, player, logOut } = this.props
     const { queueIdx, playing, queuedIds, currentId } = player
+    // console.log("LyddyStream.RENDER()...", this.props)
+    // console.log("loading? logged in?", user.isLoading, isLoggedIn())
     return (
       <div>
-       <button onClick={logOut()}>Log out</button>
+       {isLoggedIn() && <button onClick={this.handleLogout}>Sign out</button>}
        <Picker
-         value={selectedSubreddit}
+         value={selectedStream}
          onChange={this.handleChange}
-         options={['reactjs', 'frontend', 'home', 'nielvas', 'XWKhkvgF6bS5Knkg8cWT1YrJOFq1', 'F7G80ZQ0QffjiWtHT51tU8ztHRq1','nielvas/playlists/someOther', '']}
+         options={['reactjs', 'frontend', 'home', 'danvas', 'nielvas', 'XWKhkvgF6bS5Knkg8cWT1YrJOFq1', 'F7G80ZQ0QffjiWtHT51tU8ztHRq1','nielvas/playlists/someOther', '']}
        />
         <p>
           {lastUpdated &&
@@ -96,9 +190,11 @@ class LyddyStream extends Component {
               Refresh
             </a>}
         </p>
-        <SourceSubmitter/>
-        {isFetching && queuedIds.length === 0 && <h2>Loading...</h2>}
-        {!isFetching && queuedIds.length === 0 && <h2>Empty.</h2>}
+
+        {isLoggedIn() && <button onClick={this.toggleModal}>{this.state.postModalIsOpen? "-" : "+"}</button>}
+        <PostLydModal show={this.state.postModalIsOpen} onClose={this.toggleModal}></PostLydModal>
+        {user.isLoading && queuedIds.length === 0 && <h2>Loading...</h2>}
+        {!user.isLoading && queuedIds.length === 0 && <h2>Empty.</h2>}
         {queuedIds.length > 0 &&
           <div style={{ opacity: isFetching ? 0.5 : 1 }}>
           {player.currentId && <MainPlayer lyd={posts.find(post=> post.lyd_id === player.currentId)}/>}
@@ -110,19 +206,19 @@ class LyddyStream extends Component {
 }
 
 LyddyStream.propTypes = {
-  selectedSubreddit: PropTypes.string.isRequired,
+  selectedStream: PropTypes.string.isRequired,
   posts: PropTypes.array.isRequired,
   isFetching: PropTypes.bool.isRequired,
   lastUpdated: PropTypes.number,
 }
 
 function mapStateToProps(state) {
-  const { selectedSubreddit, postsBySubreddit, user, player } = state
+  const { selectedStream, postsByStream, user, player } = state
   const {
     isFetching,
     lastUpdated,
     items: posts
-  } = postsBySubreddit[selectedSubreddit] || {
+  } = postsByStream[selectedStream] || {
     isFetching: true,
     items: []
   }
@@ -130,7 +226,7 @@ function mapStateToProps(state) {
   return {
     user,
     player,
-    selectedSubreddit,
+    selectedStream,
     posts,
     isFetching,
     lastUpdated
@@ -138,11 +234,14 @@ function mapStateToProps(state) {
 }
 
 const mapDispatchToProps = dispatch => ({
-  fetchPosts: subreddit => dispatch(fetchPostsIfNeeded(subreddit)),
-  selectSubreddit: subreddit => dispatch(selectSubreddit(subreddit)),
-  invalidateSubreddit: subreddit => dispatch(invalidateSubreddit(subreddit)),
+  fetchPosts: (stream, userIds) => dispatch(fetchPostsIfNeeded(stream, userIds)),
+  selectStream: (stream) => dispatch(selectStream(stream)),
+  invalidateStream: stream => dispatch(invalidateStream(stream)),
   updateQueue: posts => dispatch(updateQueue(posts)),
-  getUser
+  getUserData: userId => dispatch(fetchUserData(userId)),
+  userRequestError: error => dispatch(handleRequestError(error)),
+  getUserCred: () => dispatch(getUser()),
+  logOut: () => dispatch(logOut())
 })
 
 export default connect(mapStateToProps, mapDispatchToProps)(LyddyStream)

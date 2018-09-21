@@ -3,36 +3,58 @@ import SimpleBox from '../components/SimpleBox';
 import InputField from '../components/InputField';
 import FooterFormButton from '../components/FooterFormButton';
 import ErrorAlert from '../components/ErrorAlert'
-import { login, getUser } from '../actions/UserActions';
+import { login, getUser, fetchUserData } from '../actions/UserActions';
+import { selectStream } from '../actions'
 import { connect } from 'react-redux';
 
 class Login extends Component {
 
     constructor(props) {
+        console.log("Login.constructor()...")
         super(props);
         this.state = {
             email: '',
             password: '',
             error: ''
         }
-        props.getUser();
+        props.getUserCred()
     }
 
     static getDerivedStateFromProps(nextProps, prevState){
+        // console.log("Login.getDerivedStateFromProps()...")
+        // console.log(nextProps)
         const { user, history } = nextProps;
-        if (user && user.email !== undefined) {
+        if (user.loggedIn && !user.isLoading) {
+            console.log("going to main page!...")
             history.push('/')
         }
         return null
     }
 
     submitLogin(event) {
+        console.log("Login.submitLogin()...")
         event.preventDefault();
-        this.props.login(this.state.email, this.state.password).catch(err => {
+        const { login, getUserData, selectStream } = this.props
+        login(this.state.email, this.state.password)
+        .then(userCred => {
+            const streamKey = userCred.user.uid
+            getUserData(streamKey)
+            selectStream("")
+        })
+        .catch(err => {
             this.setState({
                 error: err
             });
         });
+    }
+
+    componentDidUpdate() {
+        console.log("Login.componentDIDUpdate...")
+        const { getUserData, selectStream, user } = this.props
+        if (user.uid) {
+            getUserData(user.uid)
+            selectStream("")            
+        }
     }
 
     renderBody() {
@@ -58,11 +80,17 @@ class Login extends Component {
     }
 
     render() {
-        return (
-            <div>
-                <SimpleBox title="Sign in" body={this.renderBody()}/>
-            </div>
-        )
+        console.log("Login.RENDER()...", this.props)
+        const { user, history } = this.props
+        if (user.isLoading) {
+            return <div><h2>Loading...</h2></div>
+        } else {
+            return (
+                <div>
+                    <SimpleBox title="Sign in" body={this.renderBody()}/>
+                </div>
+            )
+        }
     }
 }
 
@@ -70,5 +98,12 @@ function mapStateToProps(state) {
     return { user: state.user }
 }
 
-export default connect(mapStateToProps, { login, getUser })(Login);
+const mapDispatchToProps = dispatch => ({
+    login: (username, password) => dispatch(login(username, password)),      
+    getUserData: userId => dispatch(fetchUserData(userId)),
+    getUserCred: () => dispatch(getUser()),
+    selectStream: (key) => dispatch(selectStream(key))
+})
+
+export default connect(mapStateToProps, mapDispatchToProps)(Login);
 

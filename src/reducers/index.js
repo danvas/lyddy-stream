@@ -4,8 +4,8 @@ import { playerReducer } from './PlayerReducer';
 import UserReducer from './UserReducer'
 
 import {
-  SELECT_SUBREDDIT,
-  INVALIDATE_SUBREDDIT,
+  SELECT_STREAM,
+  INVALIDATE_STREAM,
   REQUEST_LYD_POSTS,
   REQUEST_POSTS,
   RECEIVE_LYD_POSTS,
@@ -13,10 +13,10 @@ import {
   HANDLE_FETCH_ERROR
 } from '../actions'
 
-function selectedSubreddit(state = 'F7G80ZQ0QffjiWtHT51tU8ztHRq1', action) {
+function selectedStream(state='', action) {
   switch (action.type) {
-    case SELECT_SUBREDDIT:
-      return action.subreddit
+    case SELECT_STREAM:
+      return action.stream
     default:
       return state
   }
@@ -35,7 +35,7 @@ function posts(
         didInvalidate: false,
         items: []
       })
-    case INVALIDATE_SUBREDDIT:
+    case INVALIDATE_STREAM:
       return Object.assign({}, state, {
         didInvalidate: true
       })
@@ -56,14 +56,14 @@ function posts(
   }
 }
 
-function postsBySubreddit(state = {}, action) {
+function postsByStream(state = {}, action) {
   switch (action.type) {
     case HANDLE_FETCH_ERROR:
-    case INVALIDATE_SUBREDDIT:
+    case INVALIDATE_STREAM:
     case RECEIVE_POSTS:
     case REQUEST_POSTS:
       return Object.assign({}, state, {
-        [action.subreddit]: posts(state[action.subreddit], action)
+        [action.stream]: posts(state[action.stream], action)
       })
     default:
       return state
@@ -74,8 +74,8 @@ const rootReducer = combineReducers({
     form: formReducer,
     player: playerReducer,
     user: UserReducer,
-    postsBySubreddit,
-    selectedSubreddit
+    postsByStream,
+    selectedStream
 })
 
 export default rootReducer;

@@ -2,8 +2,8 @@ import { auth, usersDatabase, lyddiesDatabase } from '../Firebase';
 import { updateQueue } from './PlayerActions'
 export const REQUEST_POSTS = 'REQUEST_POSTS'
 export const RECEIVE_POSTS = 'RECEIVE_POSTS'
-export const SELECT_SUBREDDIT = 'SELECT_SUBREDDIT'
-export const INVALIDATE_SUBREDDIT = 'INVALIDATE_SUBREDDIT'
+export const SELECT_STREAM = 'SELECT_STREAM'
+export const INVALIDATE_STREAM = 'INVALIDATE_STREAM'
 export const HANDLE_FETCH_ERROR = 'HANDLE_FETCH_ERROR'
 var moment = require('moment')
 
@@ -14,17 +14,17 @@ function getSortedPosts(posts) {
   return sortedValues
 }
 
-export function selectSubreddit(subreddit) {
+export function selectStream(stream) {
   return {
-    type: SELECT_SUBREDDIT,
-    subreddit
+    type: SELECT_STREAM,
+    stream
   }
 }
 
-export function invalidateSubreddit(subreddit) {
+export function invalidateStream(stream) {
   return {
-    type: INVALIDATE_SUBREDDIT,
-    subreddit
+    type: INVALIDATE_STREAM,
+    stream
   }
 }
 
@@ -35,12 +35,13 @@ function requestPosts(userId) {
   }
 }
 
-function handleFetchError(userId, error) {
+export function handleFetchError(userId, error) {
   return {
     type: HANDLE_FETCH_ERROR,
-    subreddit: userId,
+    stream: userId,
     posts: {},
-    receivedAt: Date.now()
+    receivedAt: Date.now(),
+    error
   }
 }
 
@@ -50,23 +51,23 @@ function filterPostsByUser(userIds, posts) {
          )
 }
 
-function receivePosts(userId, posts) {
+function receivePosts(posts) {
   return {
     type: RECEIVE_POSTS,
-    subreddit: userId,
     receivedAt: Date.now(),
     posts
   }
 }
 
 function fetchPosts(userIds) {
+  console.log("!!!!!!!!!! FETCHING POSTS...")
   return dispatch => {
     dispatch(requestPosts(userIds))
     lyddiesDatabase.on('value', 
                         snap => {
                             const sortedPosts = getSortedPosts(snap.val())
                             const posts = filterPostsByUser(userIds, sortedPosts)
-                            dispatch(receivePosts(userIds[0], posts))
+                            dispatch(receivePosts(posts))
                             dispatch(updateQueue(posts.map(post=>post.lyd_id)))
                         },
                         error => dispatch(handleFetchError(userIds[0], error))
@@ -74,8 +75,7 @@ function fetchPosts(userIds) {
   }
 }
 
-function shouldFetchPosts(state, uid) {
-  const posts = state.postsBySubreddit[uid]
+function shouldFetchPosts(posts) {
   if (!posts) {
     return true
   } else if (posts.isFetching) {
@@ -85,13 +85,16 @@ function shouldFetchPosts(state, uid) {
   }
 }
 
-export function fetchPostsIfNeeded(userIds) {
+export function fetchPostsIfNeeded(streamKey, userIds) {
   return (dispatch, getState) => {
     const state = getState()
-    const uid = userIds? userIds[0] : state.user.uid
-    if (shouldFetchPosts(state, uid)) {
-      dispatch(fetchPosts(userIds))
+    console.log(state)
+    const posts = state.postsByStream[streamKey]
+    const doFetch = shouldFetchPosts(posts) && userIds.length > 0
+    console.log("doFetch????????? ", doFetch)
+    if (doFetch) {
+      console.log("YES<,,,FETCH...")
+      // dispatch(fetchPosts(userIds))
     }
-    
   }
 }

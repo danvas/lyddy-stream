@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { reduxForm } from 'redux-form';
 import { savePost } from '../actions/PostActions';
-import { getUser } from '../actions/UserActions';
+// import { getUser } from '../actions/UserActions';
 import UrlSourceForm from '../components/UrlSourceForm';
 
 var moment = require('moment');
@@ -39,13 +39,13 @@ class SourceSubmitter extends Component {
         super(props);
     }
 
-    componentWillMount() {
-        const { getUser, user } = this.props;
-        if (!user.uid){
-          getUser();  
-        } 
-
-    }
+    // componentWillMount() {
+    //     const { getUser, user } = this.props;
+    //     if (!user.uid){
+    //       console.log("SourceSubmitter.getUser!!")
+    //       getUser();  
+    //     } 
+    // }
 
     onSubmit(values) {
         const { dispatch, user, savePost } = this.props;
@@ -56,6 +56,7 @@ class SourceSubmitter extends Component {
     }
 
     render() {
+        console.log("SourceSubmitter.render... props:", this.props)
         const { handleSubmit, user } = this.props;
         return (
             <div>
@@ -71,7 +72,7 @@ function mapStateToProps(state) {
 
 const mapDispatchToProps = dispatch => ({
   savePost: lyd => dispatch(savePost(lyd)),
-  getUser
+  // getUser
 })
 
 let form = reduxForm({
@@ -80,6 +81,6 @@ let form = reduxForm({
 
 export default connect(
     mapStateToProps, 
-    { savePost, getUser }
+    { savePost }//, getUser }
 )(form);
 
