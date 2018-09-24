@@ -130,12 +130,12 @@ export function fetchPostsIfNeeded(streamKey, userIds) {
     console.log("doFetch????????? ", doFetch)
     if (doFetch) {
       console.log("YES, FETCH...")
-      const sortedPosts = getSortedPosts(POSTS)
-      const posts = filterPostsByUser(userIds, sortedPosts)
-      dispatch(requestPosts(streamKey))
-      dispatch(receivePosts(streamKey, posts))
-      dispatch(updateQueue(posts.map(post=>post.lyd_id)))
-      // dispatch(fetchPosts(streamKey, userIds))
+      // const sortedPosts = getSortedPosts(POSTS)
+      // const posts = filterPostsByUser(userIds, sortedPosts)
+      // dispatch(requestPosts(streamKey))
+      // dispatch(receivePosts(streamKey, posts))
+      // dispatch(updateQueue(posts.map(post=>post.lyd_id)))
+      dispatch(fetchPosts(streamKey, userIds))
     }
   }
 }

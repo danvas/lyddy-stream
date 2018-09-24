@@ -26,7 +26,7 @@ function posts(
   state = {
     isFetching: false,
     didInvalidate: false,
-    items: {}
+    items: []
   }, action) {
   // console.log("posts...")
   // console.log(state)

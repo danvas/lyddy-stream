@@ -21,7 +21,7 @@ import SourceSubmitter from '../containers/SourceSubmitter'
 import { auth, usersDatabase, database }  from '../Firebase';
 class LyddyStream extends Component {
   constructor(props) {
-    console.log("LyddyStream.constructor()...")
+    // console.log("LyddyStream.constructor()...")
     super(props)
     this.state = { postModalIsOpen: false }
     // console.log(props)
@@ -44,8 +44,8 @@ class LyddyStream extends Component {
   }
 
   componentDidMount() {
-    console.log("LyddyStream.componentDidMOUNT()...")
-    console.log(this.props)
+    // console.log("LyddyStream.componentDidMOUNT()...")
+    // console.log(this.props)
     const { history, getUserData, match, selectedStream, getUserCred, fetchPosts, user } = this.props
     if (!user.uid) {
       getUserCred()
@@ -74,9 +74,9 @@ class LyddyStream extends Component {
   }
 
   componentDidUpdate(prevProps) {
-    console.log("LyddyStream.componentDidUPDATE()...")
+    // console.log("LyddyStream.componentDidUPDATE()...")
     // console.log(prevProps)
-    console.log(this.props)
+    // console.log(this.props)
     const { history, isFetching, userRequestError, getUserData, selectStream, selectedStream, fetchPosts, user, match } = this.props
 
     // if (user.error['code'] === 'PERMISSION_DENIED') {
@@ -119,7 +119,7 @@ class LyddyStream extends Component {
     let userIds = this.getStreamUserIds(selectedStream, user.profiles, user.uid)
     // console.log(isFetching)
     // if (userIds.length > 0){ // Might not be needed (see `doFetch` conditional in fetchPostsIfNeeded)
-      console.log("!!!!? FETCH THESE POSTS? ", userIds)//.map(id=>user.profiles[id]['alias_name']))
+      // console.log("!!!!? FETCH THESE POSTS? ", userIds)//.map(id=>user.profiles[id]['alias_name']))
     // }
     fetchPosts(selectedStream, userIds)
   }
@@ -180,7 +180,7 @@ class LyddyStream extends Component {
   render() {
     const { selectedStream, posts, user, isFetching, lastUpdated, player, logOut } = this.props
     const { queueIdx, playing, queuedIds, currentId } = player
-    console.log("LyddyStream.RENDER()...", this.props)
+    // console.log("LyddyStream.RENDER()...", this.props)
     // console.log("loading? logged in?", user.isLoading, isLoggedIn())
     return (
       <div>
