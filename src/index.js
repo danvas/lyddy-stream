@@ -13,7 +13,7 @@ import Login from './containers/Login'
 import CreateAccount from './containers/CreateAccount'
 
 const LOG = true
-const IGNORED_ACTION = '@@redux-form/'
+const IGNORED_ACTION = '@@redux'
 const logger = createLogger({
     level: 'log',
     predicate: (getState, action) => !action.type.includes(IGNORED_ACTION)

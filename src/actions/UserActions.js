@@ -114,7 +114,7 @@ export function fetchUserData(userId) {
         snap => {
             const {playlists, ...userData} = snap.val()
             dispatch(updateAliasMap(userData.alias_name, userId))
-            dispatch(receiveUserPlaylists(userId, playlists))
+            // dispatch(receiveUserPlaylists(userId, playlists))
             dispatch(receiveUserData(userId, userData))
         },
         error => {
@@ -129,25 +129,3 @@ export function toUserId(aliasName) {
   return userIdRef.once('value')
 }
 
-export function ctoUserId(aliasName) {
-    const userIdRef = database.child(`alias_names/${aliasName}`);
-    console.log(aliasName)
-    return dispatch => {
-        dispatch(requestUserData(aliasName))
-        userIdRef.once('value').then(
-            snap => { 
-                const val = snap.val()
-                console.log(val)
-                dispatch(updateAliasMap(aliasName, val))
-            },
-            error => {
-                dispatch(handleRequestError(error))
-            }
-        )
-    }
-}
-
-// export function getUserProfile(userId) {
-//   const userRef = usersDatabase.child(userId);
-//   return userRef.once('value')
-// }

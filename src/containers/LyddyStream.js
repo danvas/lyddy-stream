@@ -5,7 +5,9 @@ import _ from 'lodash'
 import {
   selectStream,
   fetchPostsIfNeeded,
-  invalidateStream
+  invalidateStream,
+  // requestPosts,
+  // receivePosts
 } from '../actions'
 import { handleRequestError, isLoggedIn, getUser, fetchUserData, logOut, toUserId } from '../actions/UserActions'
 import { updateQueue } from '../actions/PlayerActions'
@@ -27,6 +29,7 @@ class LyddyStream extends Component {
     this.handleChange = this.handleChange.bind(this)
     this.handleLogout = this.handleLogout.bind(this)
     this.handleRefreshClick = this.handleRefreshClick.bind(this) 
+    this.handleFetchClick = this.handleFetchClick.bind(this) 
   }
 
   getCachedUserId = userKey => {
@@ -74,7 +77,7 @@ class LyddyStream extends Component {
     console.log("LyddyStream.componentDidUPDATE()...")
     // console.log(prevProps)
     console.log(this.props)
-    const { history, userRequestError, getUserData, selectStream, selectedStream, fetchPosts, user, match } = this.props
+    const { history, isFetching, userRequestError, getUserData, selectStream, selectedStream, fetchPosts, user, match } = this.props
 
     // if (user.error['code'] === 'PERMISSION_DENIED') {
     //   userRequestError({}) // reset error to empty
@@ -101,7 +104,6 @@ class LyddyStream extends Component {
         // .then(streamKey => console.log("streamKey =",streamKey))
         .catch(err => {
           console.log(err)
-          selectStream("")
         })
       } else if (userAlias in user.aliasMap) {
         console.log("alias already in cache... selecStream? ", selectedStream)
@@ -115,11 +117,11 @@ class LyddyStream extends Component {
       }
     }
     let userIds = this.getStreamUserIds(selectedStream, user.profiles, user.uid)
-
-    if (userIds.length > 0){ // Might not be needed (see `doFetch` conditional in fetchPostsIfNeeded)
-      console.log("fetch posts by: ", userIds)//.map(id=>user.profiles[id]['alias_name']))
-      fetchPosts(selectedStream, userIds)
-    }
+    // console.log(isFetching)
+    // if (userIds.length > 0){ // Might not be needed (see `doFetch` conditional in fetchPostsIfNeeded)
+      console.log("!!!!? FETCH THESE POSTS? ", userIds)//.map(id=>user.profiles[id]['alias_name']))
+    // }
+    fetchPosts(selectedStream, userIds)
   }
 
   handleLogout() {
@@ -141,7 +143,6 @@ class LyddyStream extends Component {
     }
     selectStream(streamKey)
     history.replace(`/${nextStream}`);
-
   }
 
   refreshPosts() {
@@ -150,6 +151,16 @@ class LyddyStream extends Component {
     const userIds = [selectedStream].concat(user.following)
     // fetchPosts(userIds)
   }
+
+  handleFetchClick(e) {
+    console.log("LyddyStream.handleFetchClick()...")
+    e.preventDefault()
+    console.log(this.props) 
+    const { fetchPosts, selectedStream, user } = this.props
+    let userIds = this.getStreamUserIds(selectedStream, user.profiles, user.uid)
+    fetchPosts(selectedStream, userIds)
+  }
+
   handleRefreshClick(e) {
     console.log("LyddyStream.handleRefreshClick()...")
     e.preventDefault()
@@ -169,11 +180,12 @@ class LyddyStream extends Component {
   render() {
     const { selectedStream, posts, user, isFetching, lastUpdated, player, logOut } = this.props
     const { queueIdx, playing, queuedIds, currentId } = player
-    // console.log("LyddyStream.RENDER()...", this.props)
+    console.log("LyddyStream.RENDER()...", this.props)
     // console.log("loading? logged in?", user.isLoading, isLoggedIn())
     return (
       <div>
-       {isLoggedIn() && <button onClick={this.handleLogout}>Sign out</button>}
+       {user.loggedIn && <button onClick={this.handleLogout}>Sign out</button>}
+       {!user.loggedIn && <a href="/login">Sign in</a>}
        <Picker
          value={selectedStream}
          onChange={this.handleChange}
@@ -190,8 +202,8 @@ class LyddyStream extends Component {
               Refresh
             </a>}
         </p>
-
-        {isLoggedIn() && <button onClick={this.toggleModal}>{this.state.postModalIsOpen? "-" : "+"}</button>}
+        <p><a href="#" onClick={this.handleFetchClick}>Test!</a></p>
+        {user.loggedIn && <button onClick={this.toggleModal}>{this.state.postModalIsOpen? "-" : "+"}</button>}
         <PostLydModal show={this.state.postModalIsOpen} onClose={this.toggleModal}></PostLydModal>
         {user.isLoading && queuedIds.length === 0 && <h2>Loading...</h2>}
         {!user.isLoading && queuedIds.length === 0 && <h2>Empty.</h2>}
@@ -241,7 +253,9 @@ const mapDispatchToProps = dispatch => ({
   getUserData: userId => dispatch(fetchUserData(userId)),
   userRequestError: error => dispatch(handleRequestError(error)),
   getUserCred: () => dispatch(getUser()),
-  logOut: () => dispatch(logOut())
+  logOut: () => dispatch(logOut()),
+  // requestPosts: streamKey => dispatch(requestPosts(streamKey)),
+  // receivePosts: (stream, POSTS) => dispatch(receivePosts(stream, POSTS))
 })
 
 export default connect(mapStateToProps, mapDispatchToProps)(LyddyStream)

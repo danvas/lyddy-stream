@@ -26,8 +26,11 @@ function posts(
   state = {
     isFetching: false,
     didInvalidate: false,
-    items: []
+    items: {}
   }, action) {
+  // console.log("posts...")
+  // console.log(state)
+  // console.log(action)
   switch (action.type) {
     case HANDLE_FETCH_ERROR:
       return Object.assign({}, state, {
@@ -57,14 +60,17 @@ function posts(
 }
 
 function postsByStream(state = {}, action) {
+  // console.log("postsByStream...")
+  // console.log(state)
+  // console.log(action)
   switch (action.type) {
     case HANDLE_FETCH_ERROR:
     case INVALIDATE_STREAM:
     case RECEIVE_POSTS:
     case REQUEST_POSTS:
-      return Object.assign({}, state, {
+      return {...state,
         [action.stream]: posts(state[action.stream], action)
-      })
+      }
     default:
       return state
   }
