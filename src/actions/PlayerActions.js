@@ -33,7 +33,6 @@ export const enqueueLyd = lydId => {
 }
 
 export const updateQueue  = queuedIds => {
-    
     return {
         type: UPDATE_QUEUE,
         queuedIds

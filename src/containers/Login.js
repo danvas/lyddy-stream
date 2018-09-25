@@ -21,7 +21,7 @@ class Login extends Component {
     }
 
     static getDerivedStateFromProps(nextProps, prevState){
-        // console.log("Login.getDerivedStateFromProps()...")
+        console.log("Login.getDerivedStateFromProps()...")
         // console.log(nextProps)
         const { user, history } = nextProps;
         if (user.loggedIn && !user.isLoading) {

@@ -75,7 +75,6 @@ function fetchPosts(stream, userIds) {
                             const sortedPosts = getSortedPosts(snap.val())
                             const posts = filterPostsByUser(userIds, sortedPosts)
                             dispatch(receivePosts(stream, posts))
-                            dispatch(updateQueue(posts.map(post=>post.lyd_id)))
                         },
                         error => dispatch(handleFetchError(stream || 'home', error))
                         );
@@ -127,9 +126,9 @@ export function fetchPostsIfNeeded(streamKey, userIds) {
     const state = getState()
     const posts = state.postsByStream[streamKey]
     const doFetch = shouldFetchPosts(posts) && userIds.length > 0
-    console.log("doFetch????????? ", doFetch)
+    // console.log("doFetch????????? ", doFetch)
     if (doFetch) {
-      console.log("YES, FETCH...")
+      // console.log("YES, FETCH...")
       // const sortedPosts = getSortedPosts(POSTS)
       // const posts = filterPostsByUser(userIds, sortedPosts)
       // dispatch(requestPosts(streamKey))

@@ -60,7 +60,6 @@ export const playerReducer = (state=defaultState, action) => {
             queuedIds = action.queuedIds
             queueIdx = queuedIds.findIndex(id => id === state.currentId)
             currentId = queuedIds[queueIdx]
-            
             return {...state, queuedIds, currentId}
         
         default:

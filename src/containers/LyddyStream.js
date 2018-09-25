@@ -5,9 +5,7 @@ import _ from 'lodash'
 import {
   selectStream,
   fetchPostsIfNeeded,
-  invalidateStream,
-  // requestPosts,
-  // receivePosts
+  invalidateStream
 } from '../actions'
 import { handleRequestError, isLoggedIn, getUser, fetchUserData, logOut, toUserId } from '../actions/UserActions'
 import { updateQueue } from '../actions/PlayerActions'
@@ -21,7 +19,7 @@ import SourceSubmitter from '../containers/SourceSubmitter'
 import { auth, usersDatabase, database }  from '../Firebase';
 class LyddyStream extends Component {
   constructor(props) {
-    // console.log("LyddyStream.constructor()...")
+    console.log("LyddyStream.constructor()...")
     super(props)
     this.state = { postModalIsOpen: false }
     // console.log(props)
@@ -30,6 +28,7 @@ class LyddyStream extends Component {
     this.handleLogout = this.handleLogout.bind(this)
     this.handleRefreshClick = this.handleRefreshClick.bind(this) 
     this.handleFetchClick = this.handleFetchClick.bind(this) 
+    this.refreshQueuedIds = this.refreshQueuedIds.bind(this) 
   }
 
   getCachedUserId = userKey => {
@@ -44,7 +43,7 @@ class LyddyStream extends Component {
   }
 
   componentDidMount() {
-    // console.log("LyddyStream.componentDidMOUNT()...")
+    console.log("LyddyStream.componentDidMOUNT()...")
     // console.log(this.props)
     const { history, getUserData, match, selectedStream, getUserCred, fetchPosts, user } = this.props
     if (!user.uid) {
@@ -74,10 +73,11 @@ class LyddyStream extends Component {
   }
 
   componentDidUpdate(prevProps) {
-    // console.log("LyddyStream.componentDidUPDATE()...")
+    console.log("LyddyStream.componentDidUPDATE()...")
     // console.log(prevProps)
     // console.log(this.props)
-    const { history, isFetching, userRequestError, getUserData, selectStream, selectedStream, fetchPosts, user, match } = this.props
+    const { history, updateQueue, userRequestError, getUserData, selectStream, 
+      selectedStream, fetchPosts, user, match, player, posts } = this.props
 
     // if (user.error['code'] === 'PERMISSION_DENIED') {
     //   userRequestError({}) // reset error to empty
@@ -98,7 +98,9 @@ class LyddyStream extends Component {
             throw new Error(`Alias '${userAlias}' doesn't exist`)
           }
           getUserData(streamKey)
-          selectStream(streamKey)
+          if (selectedStream !== streamKey) {
+            selectStream(streamKey)
+          }
           return streamKey
         }, err => console.log(err))
         // .then(streamKey => console.log("streamKey =",streamKey))
@@ -106,14 +108,16 @@ class LyddyStream extends Component {
           console.log(err)
         })
       } else if (userAlias in user.aliasMap) {
-        console.log("alias already in cache... selecStream? ", selectedStream)
+        // console.log("alias already in cache... selecStream? ", selectedStream)
       }
     } else {
       if (user.loggedIn && !user.isLoading) {
         if (!(user.uid in user.profiles)) {
           getUserData(user.uid)
         }
-        selectStream("")
+        if (selectedStream !== "") {
+          selectStream("")
+        }
       }
     }
     let userIds = this.getStreamUserIds(selectedStream, user.profiles, user.uid)
@@ -122,6 +126,22 @@ class LyddyStream extends Component {
       // console.log("!!!!? FETCH THESE POSTS? ", userIds)//.map(id=>user.profiles[id]['alias_name']))
     // }
     fetchPosts(selectedStream, userIds)
+    this.refreshQueuedIds(posts, player.queuedIds)
+  }
+
+  refreshQueuedIds = (posts, queuedIds) => {
+    const { updateQueue } = this.props
+    if (posts.length === 0) {
+      return
+    }
+    const postsIds = posts.map(post => post.lyd_id)
+    const postsIdsOrig = postsIds.slice()
+    const queuedIdsOrig = queuedIds.slice()
+    const hasChanged = !_.isEqual(postsIdsOrig.sort(), queuedIdsOrig.sort())
+    if (hasChanged){
+      console.log("REFRESH QUEUE!!! ", postsIds)
+      updateQueue(postsIds)
+    }
   }
 
   handleLogout() {
@@ -133,15 +153,13 @@ class LyddyStream extends Component {
   handleChange(nextStream) {
     console.log("LyddyStream.handleChange()...", `'${nextStream}'`)
     const { getUserData, selectStream, fetchPosts, history, user } = this.props
-    // let userId = this.getCachedUserId(nextStream)
-    const userIds = [nextStream].concat(user.following)
-    // fetchPosts(userIds)
-    // updateQueue([nextStream])
     let streamKey = nextStream
     if (nextStream in user.aliasMap) {
       streamKey = user.aliasMap[nextStream]
+      selectStream(streamKey)
     }
-    selectStream(streamKey)
+    const userIds = this.getStreamUserIds(streamKey, user.profiles, user.uid)
+    fetchPosts(streamKey, userIds)
     history.replace(`/${nextStream}`);
   }
 
@@ -180,7 +198,7 @@ class LyddyStream extends Component {
   render() {
     const { selectedStream, posts, user, isFetching, lastUpdated, player, logOut } = this.props
     const { queueIdx, playing, queuedIds, currentId } = player
-    // console.log("LyddyStream.RENDER()...", this.props)
+    console.log("LyddyStream.RENDER()...", this.props)
     // console.log("loading? logged in?", user.isLoading, isLoggedIn())
     return (
       <div>
@@ -202,8 +220,8 @@ class LyddyStream extends Component {
               Refresh
             </a>}
         </p>
-        <p><a href="#" onClick={this.handleFetchClick}>Test!</a></p>
-        {user.loggedIn && <button onClick={this.toggleModal}>{this.state.postModalIsOpen? "-" : "+"}</button>}
+        {false && <p><a href="#" onClick={this.handleFetchClick}>Test!</a></p>}
+        {user.loggedIn && <button onClick={this.toggleModal}>{this.state.postModalIsOpen? "cancel" : "New track"}</button>}
         <PostLydModal show={this.state.postModalIsOpen} onClose={this.toggleModal}></PostLydModal>
         {user.isLoading && queuedIds.length === 0 && <h2>Loading...</h2>}
         {!user.isLoading && queuedIds.length === 0 && <h2>Empty.</h2>}
@@ -254,8 +272,6 @@ const mapDispatchToProps = dispatch => ({
   userRequestError: error => dispatch(handleRequestError(error)),
   getUserCred: () => dispatch(getUser()),
   logOut: () => dispatch(logOut()),
-  // requestPosts: streamKey => dispatch(requestPosts(streamKey)),
-  // receivePosts: (stream, POSTS) => dispatch(receivePosts(stream, POSTS))
 })
 
 export default connect(mapStateToProps, mapDispatchToProps)(LyddyStream)
