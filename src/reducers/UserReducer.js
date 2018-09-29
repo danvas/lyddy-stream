@@ -1,7 +1,7 @@
 
 import { 
     REQUEST_USER_DATA,
-    UPDATE_ALIAS_MAP,
+    UPDATE_ALIAS_MAPS,
     USER_REQUEST_ERROR,
     GET_USER, 
     RECEIVE_USER_DATA,
@@ -9,17 +9,25 @@ import {
 } from '../actions/UserActions';
 
 export default function(state={isLoading: false, loggedIn: false, 
-    profiles: {}, streams: {}, aliasMap: {}, error: {}}, action) {
+    profiles: {}, streams: {}, aliasToId: {}, idToAlias: {}, error: {}}, action) {
     // console.log(action.userData)
     // console.log(state, action.payload)
     switch (action.type) {
         case REQUEST_USER_DATA:
             return {...state, error: {}, isLoading: true}
 
-        case UPDATE_ALIAS_MAP:
-            var aliasMap = {...state.aliasMap}
-            aliasMap[action.alias] = action.userId
-            return {...state, error: {}, aliasMap}
+        case UPDATE_ALIAS_MAPS:
+            var aliasToId = {...state.aliasToId}
+            var idToAlias = {...state.idToAlias}
+            var userId
+            for (var alias in action.aliasToId) {
+                userId = action.aliasToId[alias]
+                aliasToId[alias] = userId
+                idToAlias[userId] = alias
+            }
+            // aliasToId[action.alias] = action.userId
+            // idToAlias[action.userId] = action.alias
+            return {...state, error: {}, aliasToId, idToAlias}
 
         case USER_REQUEST_ERROR:
             let error = {...action.error}
@@ -42,7 +50,7 @@ export default function(state={isLoading: false, loggedIn: false,
                 props.forEach(prop => currentUser[prop] = payload[prop])
                 return {...state, error: {}, isLoading: false, ...currentUser, loggedIn}
             } else {
-                const aliasMap = {...state.aliasMap}
+                const aliasToId = {...state.aliasToId}
                 return {...state, error: {}, isLoading: false, loggedIn}
             }
             

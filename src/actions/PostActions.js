@@ -1,4 +1,4 @@
-import { auth, usersDatabase, lyddiesDatabase } from '../Firebase';
+import { auth, usersDatabase, lyddiesDatabase, database } from '../Firebase';
 import { reset } from 'redux-form';
 import { updateQueue } from './PlayerActions'
 
@@ -26,6 +26,26 @@ export function savePost(values) {
         dispatch(pushToPlaylist(newPostRef.key))
     }     
 }
+
+
+export function updateAllPrivacy(userId, isPublic) {
+    const privPub = isPublic? 'PUBLIC':'PRIVATE'
+    console.log(`!!!!!!!!!! MAKE ${privPub} : `, userId)
+    const userPosts = lyddiesDatabase.orderByChild('user_id').equalTo(userId)
+
+    console.log(userPosts)
+    let posts = {}
+    userPosts.once('value')
+        .then(snap => snap.forEach(
+                         dat => {
+                            console.log(dat.key)
+                            lyddiesDatabase.child(dat.key).update({'public': isPublic}, 
+                                res => console.log(res))
+                         }
+                      )
+             )
+}
+
 
 export function deletePost(id) {
     return dispatch => lyddiesDatabase.child(id).remove();

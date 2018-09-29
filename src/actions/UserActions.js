@@ -5,7 +5,7 @@ export const REQUEST_USER_DATA = 'REQUEST_USER_DATA'
 export const RECEIVE_USER_DATA = 'RECEIVE_USER_DATA'
 export const RECEIVE_USER_STREAM = 'RECEIVE_USER_STREAM'
 export const USER_REQUEST_ERROR = 'USER_REQUEST_ERROR'
-export const UPDATE_ALIAS_MAP = 'UPDATE_ALIAS_MAP'
+export const UPDATE_ALIAS_MAPS = 'UPDATE_ALIAS_MAPS'
 
 export function isLoggedIn() {
     // console.log(auth.currentUser? auth.currentUser.uid : auth.currentUser)
@@ -57,11 +57,10 @@ function receiveUserPlaylists(userId, streams) {
   }
 }
 
-function updateAliasMap(alias, userId) {
+function updateAliasMaps(aliasToId) {
   return {
-    type: UPDATE_ALIAS_MAP,
-    alias,
-    userId
+    type: UPDATE_ALIAS_MAPS,
+    aliasToId,
   }   
 }
 
@@ -106,6 +105,35 @@ export function setUser(userId) {
     userRef.set(userData);
 }
 
+
+export function getAliasFromProfiles(userIds) {
+    const firstId = userIds[0]
+    const lastId = firstId//userIds[userIds.length - 1]
+    // console.log(userIds, firstId, lastId)
+    const aliasNamesRef = usersDatabase.orderByKey().startAt(firstId)//.endAt(lastId)
+    return dispatch => {    
+        console.log("ALIAS fetched!!!", )
+        aliasNamesRef.once('value')
+        .then(snap => {
+            const profiles = snap.val()
+            if (profiles !== null) {
+                var aliasName
+                let aliasToId = {}
+                for (var userId in profiles) {
+                    aliasName = profiles[userId]['alias_name']
+                    aliasToId[aliasName] = userId
+                }
+                console.log(aliasToId)
+                dispatch(updateAliasMaps(aliasToId))
+            } else {
+                const error = `LyddyError: Could not find alias name from uid '${userIds}' in 'alias_names' database ref`
+                dispatch(handleRequestError(error))
+            }
+        })
+        // .catch(error => dispatch(handleRequestError(error)))
+    }
+}
+
 export function fetchUserData(userId) {
   const userRef = usersDatabase.child(userId);
   return dispatch => {
@@ -113,7 +141,9 @@ export function fetchUserData(userId) {
     userRef.once('value').then(
         snap => {
             const {playlists, ...userData} = snap.val()
-            dispatch(updateAliasMap(userData.alias_name, userId))
+            var userIds = [userId]
+            var userIds = userIds.concat(Object.keys(userData['follows']))
+            dispatch(getAliasFromProfiles(userIds.sort()))
             // dispatch(receiveUserPlaylists(userId, playlists))
             dispatch(receiveUserData(userId, userData))
         },

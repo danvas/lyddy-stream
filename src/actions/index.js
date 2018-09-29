@@ -1,4 +1,4 @@
-import { auth, usersDatabase, lyddiesDatabase } from '../Firebase';
+import { auth, usersDatabase, lyddiesDatabase, postsDatabase } from '../Firebase';
 import { updateQueue } from './PlayerActions'
 export const REQUEST_POSTS = 'REQUEST_POSTS'
 export const RECEIVE_POSTS = 'RECEIVE_POSTS'
@@ -9,11 +9,11 @@ var moment = require('moment')
 
 function getSortedPosts(posts) {
   // const postValues = posts? Object.values(posts) : []
-  let postValues = []
+  let postValues = posts.slice()
   let post = null
-  for (post in posts) {
-    postValues.push({'lyd_id':post, ...posts[post]})
-  }
+  // for (post in posts) {
+  //   postValues.push({'lyd_id':post, ...posts[post]})
+  // }
 
   const sortedValues = postValues.sort((a,b) => {
     return moment(b.date_added).valueOf() - moment(a.date_added).valueOf()})
@@ -67,13 +67,28 @@ export function receivePosts(stream, posts) {
 }
 
 function fetchPosts(stream, userIds) {
-  console.log("!!!!!!!!!! FETCHING POSTS...")
+  console.log("!!!!!!!!!! FETCHING POSTS! : ", stream, userIds)
+  
+  // let postRef = lyddiesDatabase.orderByChild('name').limitToFirst(200)
+  // postRef = lyddiesDatabase.orderByChild('date_added').limitToFirst(200)
   return dispatch => {
     dispatch(requestPosts(stream))
-    lyddiesDatabase.on('value', 
+    lyddiesDatabase.limitToFirst(200).on('value', 
                         snap => {
-                            const sortedPosts = getSortedPosts(snap.val())
-                            const posts = filterPostsByUser(userIds, sortedPosts)
+                            let posts = []
+                            var post
+                            var postId
+                            // console.log(snap.val())
+                            snap.forEach(data => {
+                              post = data.val()
+                              // console.log(post)
+                              // console.log(userIds.includes(post.user_id), post.public)
+                              const isValid = userIds.includes(post.user_id) //|| post.public
+                              if (isValid) {
+                                posts.push({...post, 'lyd_id': data.key})
+                              }
+                            })
+                            posts.reverse()
                             dispatch(receivePosts(stream, posts))
                         },
                         error => dispatch(handleFetchError(stream || 'home', error))
@@ -82,7 +97,9 @@ function fetchPosts(stream, userIds) {
 }
 
 function shouldFetchPosts(posts) {
-  const postsEmpty = !posts || posts.length === 0
+  const postsEmpty = Object.keys(posts).length === 0 || posts.items.length === 0
+  console.log(posts, posts.items && posts.items.length === 0)
+  console.log(postsEmpty)
   if (postsEmpty) {
     return true
   } else if (posts.isFetching) {
@@ -124,11 +141,12 @@ const POSTS = {"-L-jsNBCJhPN2zB9YLR7": {
 export function fetchPostsIfNeeded(streamKey, userIds) {
   return (dispatch, getState) => {
     const state = getState()
-    const posts = state.postsByStream[streamKey]
+    console.log(state)
+    const posts = state.postsByStream[streamKey] || {}
     const doFetch = shouldFetchPosts(posts) && userIds.length > 0
-    // console.log("doFetch????????? ", doFetch)
+    // console.log("doFetch????????? ", doFetch, posts)
     if (doFetch) {
-      // console.log("YES, FETCH...")
+      console.log("YES, FETCH...")
       // const sortedPosts = getSortedPosts(POSTS)
       // const posts = filterPostsByUser(userIds, sortedPosts)
       // dispatch(requestPosts(streamKey))
