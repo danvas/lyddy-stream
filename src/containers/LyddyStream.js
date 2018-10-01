@@ -7,7 +7,7 @@ import {
   fetchPostsIfNeeded,
   invalidateStream
 } from '../actions'
-import { handleRequestError, isLoggedIn, getUser, fetchUserData, logOut, toUserId } from '../actions/UserActions'
+import { getUserIdFromAlias, handleRequestError, isLoggedIn, getUser, getUserDataFromAlias, fetchUserData, logOut, toUserId } from '../actions/UserActions'
 import { updateQueue } from '../actions/PlayerActions'
 import Picker from '../components/Picker'
 import { LydList } from '../containers/LydList'
@@ -31,27 +31,24 @@ class LyddyStream extends Component {
     this.refreshQueuedIds = this.refreshQueuedIds.bind(this) 
   }
 
-  getCachedUserId = userKey => {
-    const { user, getUserData, selectStream} = this.props
-    let streamId = null
-    if (userKey in user.aliasToId){
-      streamId = user.aliasToId[userKey]
-    } else if (userKey in Object.values(user.aliasToId)) {
-      streamId = userKey
-    }
-    return streamId
-  }
-
   componentDidMount() {
     console.log("LyddyStream.componentDidMOUNT()...")
     // console.log(this.props)
-    const { history, match, selectedStream, getUserCred, fetchPosts, user } = this.props
+    const { history, match, getUserIdFromAlias, selectedStream, getUserCred, fetchPosts, user } = this.props
+    
     if (!user.uid) {
       getUserCred()
     }
+
+    const userAlias = match.params['user_alias']
+    if (userAlias && !(userAlias in user.aliasToId)) {
+      getUserIdFromAlias(userAlias)
+    }
   }
 
-  getStreamUserIds = (streamKey, profiles, authUserId) => {
+
+  getStreamUserIds(streamKey, profiles, authUserId) {
+    console.log("getStreamUserIds: ", `'${streamKey}'`, profiles, authUserId)
     let userIds = []
     let userId = streamKey || authUserId
     if (!userId || Object.keys(profiles).length === 0 || !profiles[userId]) {
@@ -59,7 +56,7 @@ class LyddyStream extends Component {
     }
 
     userIds = [userId]
-    const follows = profiles[userId]['follows']
+    const follows = profiles[userId]['follows'] || {}
     if (streamKey === '') {
       userIds = userIds.concat(Object.keys(follows))
     }
@@ -67,63 +64,56 @@ class LyddyStream extends Component {
     return userIds
   }
 
+  static getDerivedStateFromProps(nextProps, prevState){
+    console.log("LyddyStream.getDerivedStateFromProps()...", nextProps)
+    const { user, history, match, getUserDataFromAlias, getUserCred, selectStream } = nextProps;
+    
+    const inErrorState = user.error.code && (user.error.param !== prevState.erroredParam)
+    if (inErrorState) {
+      return {'erroredParam': user.error.param}
+    }
+
+    return null
+  }
+
   componentDidUpdate(prevProps) {
     console.log("LyddyStream.componentDidUPDATE()...")
-    // console.log(prevProps)
-    // console.log(this.props)
-    const { history, updateQueue, userRequestError, getUserData,
+    // console.log(prevProps.user)
+    console.log(this.props)
+    const { history, updateQueue, userRequestError, getUserDataFromAlias, getUserData,
       selectStream, selectedStream, fetchPosts, user, match, 
       player, posts, isFetching } = this.props
 
-    // if (user.error['code'] === 'PERMISSION_DENIED') {
-    //   userRequestError({}) // reset error to empty
-    //   return
-    // }
-
-    const userAlias = match.params['user_alias']
-    if (userAlias) {
-      // console.log(userAlias)
-      // this.getCachedUserId(userAlias)
-      if (!user.isLoading && !(userAlias in user.aliasToId)) {
-
-        toUserId(userAlias)
-        .then(snap => {
-          const streamKey = snap.val()
-          // console.log(streamKey)
-          if (streamKey === null) {
-            throw new Error(`Alias '${userAlias}' doesn't exist`)
-          }
-          getUserData(streamKey)
-          if (selectedStream !== streamKey) {
-            selectStream(streamKey)
-          }
-          return streamKey
-        }, err => console.log(err))
-        // .then(streamKey => console.log("streamKey =",streamKey))
-        .catch(err => {
-          console.log(err)
-        })
-      } else if (userAlias in user.aliasToId) {
-        // console.log("alias already in cache... selecStream? ", selectedStream)
-      }
-    } else {
-      if (user.loggedIn && !user.isLoading) {
-        if (!(user.uid in user.profiles)) {
-          getUserData(user.uid)
-        }
-        if (selectedStream !== "") {
-          selectStream("")
-        }
-      }
+    if (user.pendRequests.length > 0) {
+      return
     }
 
-    let userIds = this.getStreamUserIds(selectedStream, user.profiles, user.uid)
-    fetchPosts(selectedStream, userIds)
+    let streamKey = ''
+    let userId = user.uid
+    const userAlias = match.params['user_alias']
+    if (userAlias) {
+      userId = user.aliasToId[userAlias] || userAlias
+      streamKey = user.aliasToId[userAlias] || ''
+    }
+
+    if (this.state.erroredParam === userId) {
+      return
+    }
+    if (!(userId in user.profiles)) {
+      getUserData(userId)
+    }
+
+    if (streamKey !== selectedStream) {
+      selectStream(streamKey)
+    }
+
+    const userIds = this.getStreamUserIds(streamKey, user.profiles, user.uid)
+    fetchPosts(streamKey, userIds)
     this.refreshQueuedIds(posts, player.queuedIds)
   }
 
 
-  refreshQueuedIds = (posts, queuedIds) => {
+  refreshQueuedIds(posts, queuedIds) {
     const { updateQueue } = this.props
     if (posts.length === 0) {
       return
@@ -133,7 +123,7 @@ class LyddyStream extends Component {
     const queuedIdsOrig = queuedIds.slice()
     const hasChanged = !_.isEqual(postsIdsOrig.sort(), queuedIdsOrig.sort())
     if (hasChanged){
-      // console.log("REFRESH QUEUE!!! ", postsIds)
+      console.log("REFRESH QUEUE!!! ", postsIds)
       updateQueue(postsIds)
     }
   }
@@ -146,15 +136,8 @@ class LyddyStream extends Component {
 
   handleChange(nextStream) {
     console.log("LyddyStream.handleChange()...", `'${nextStream}'`)
-    const { getUserData, selectStream, fetchPosts, history, user } = this.props
-    let streamKey = nextStream
-    if (nextStream in user.aliasToId) {
-      streamKey = user.aliasToId[nextStream]
-      selectStream(streamKey)
-    }
-    // const userIds = this.getStreamUserIds(streamKey, user.profiles, user.uid)
-    // fetchPosts(streamKey, userIds)
-    history.replace(`/${nextStream}`);
+    const { getUserData, selectStream, selectedStream, fetchPosts, history, user } = this.props
+    history.push(`/${nextStream}`);
   }
 
   refreshPosts() {
@@ -170,7 +153,7 @@ class LyddyStream extends Component {
     console.log(this.props) 
     const { fetchPosts, selectedStream, user } = this.props
     let userIds = this.getStreamUserIds(selectedStream, user.profiles, user.uid)
-    fetchPosts(selectedStream, userIds)
+    // fetchPosts(selectedStream, userIds)
   }
 
   handleRefreshClick(e) {
@@ -190,18 +173,21 @@ class LyddyStream extends Component {
   }
 
   render() {
-    const { selectedStream, posts, user, isFetching, lastUpdated, player, logOut } = this.props
+    const { userRequestError, selectedStream, posts, user, isFetching, lastUpdated, player, logOut } = this.props
     const { queueIdx, playing, queuedIds, currentId } = player
     console.log("LyddyStream.RENDER()...", this.props)
+    console.log(this.state)
+    // if (user.error['code'] === 'PERMISSION_DENIED') {
     // console.log("loading? logged in?", user.isLoading, isLoggedIn())
     const aliasNames = Object.values(user.idToAlias) 
+
     return (
       <div>
        {user.loggedIn && <button onClick={this.handleLogout}>Sign out</button>}
        {!user.loggedIn && <a href="/login">Sign in</a>}
        {aliasNames.length > 0 && 
         <Picker
-                value={user.idToAlias[selectedStream] || user.idToAlias[user.uid]}
+                value={user.idToAlias[selectedStream] || ''}
                 onChange={this.handleChange}
                 options={['','home', 'errored'].concat(aliasNames)}
               />
@@ -218,11 +204,12 @@ class LyddyStream extends Component {
             </a>}
         </p>
         {false && <p><a href="#" onClick={this.handleFetchClick}>Test!</a></p>}
-        {user.loggedIn && <button onClick={this.toggleModal}>{this.state.postModalIsOpen? "cancel" : "New track"}</button>}
+        {!this.state.erroredParam && user.loggedIn && <button onClick={this.toggleModal}>{this.state.postModalIsOpen? "cancel" : "New track"}</button>}
         <PostLydModal show={this.state.postModalIsOpen} onClose={this.toggleModal}></PostLydModal>
         {user.isLoading && queuedIds.length === 0 && <h2>Loading...</h2>}
-        {(!user.isLoading && queuedIds.length === 0 && user.loggedIn) && <h2>Empty.</h2>}
-        {queuedIds.length > 0 &&
+        {(!this.state.erroredParam && !user.isLoading && queuedIds.length === 0 && user.loggedIn) && <h2>Empty.</h2>}
+        {this.state.erroredParam && <div><h2>Sorry, this page isn't available.</h2><p>The link you followed may be broken, or the page may have been removed. Go back to <a href='/'>homepage</a>.</p></div>}
+        {!this.state.erroredParam && queuedIds.length > 0 &&
           <div style={{ opacity: isFetching ? 0.5 : 1 }}>
           {player.currentId && <MainPlayer lyd={posts.find(post=> post.lyd_id === player.currentId)}/>}
           <hr></hr>
@@ -232,7 +219,6 @@ class LyddyStream extends Component {
     )
   }
 }
-
 LyddyStream.propTypes = {
   selectedStream: PropTypes.string.isRequired,
   posts: PropTypes.array.isRequired,
@@ -267,6 +253,8 @@ const mapDispatchToProps = dispatch => ({
   invalidateStream: stream => dispatch(invalidateStream(stream)),
   updateQueue: posts => dispatch(updateQueue(posts)),
   getUserData: userId => dispatch(fetchUserData(userId)),
+  getUserDataFromAlias: aliasName => dispatch(getUserDataFromAlias(aliasName)),
+  getUserIdFromAlias: aliasName => dispatch(getUserIdFromAlias(aliasName)),
   userRequestError: error => dispatch(handleRequestError(error)),
   getUserCred: () => dispatch(getUser()),
   logOut: () => dispatch(logOut()),

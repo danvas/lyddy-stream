@@ -36,10 +36,10 @@ export function getUser() {
     }
 }
 
-function requestUserData(userKey) {
+function requestUserData(item) {
   return {
     type: REQUEST_USER_DATA,
-    userKey  
+    item  
   }
 }
 function receiveUserData(userId, userData) {
@@ -113,6 +113,7 @@ export function getAliasFromProfiles(userIds) {
     const aliasNamesRef = usersDatabase.orderByKey().startAt(firstId)//.endAt(lastId)
     return dispatch => {    
         console.log("ALIAS fetched!!!", )
+        dispatch(requestUserData('getAliasFromProfiles'))
         aliasNamesRef.once('value')
         .then(snap => {
             const profiles = snap.val()
@@ -123,10 +124,10 @@ export function getAliasFromProfiles(userIds) {
                     aliasName = profiles[userId]['alias_name']
                     aliasToId[aliasName] = userId
                 }
-                console.log(aliasToId)
                 dispatch(updateAliasMaps(aliasToId))
             } else {
-                const error = `LyddyError: Could not find alias name from uid '${userIds}' in 'alias_names' database ref`
+                const message = `LyddyError: Could not find alias names for ${userIds}`
+                const error = {code: 'ALIAS_NOT_FOUND', param: userIds, message}
                 dispatch(handleRequestError(error))
             }
         })
@@ -137,15 +138,22 @@ export function getAliasFromProfiles(userIds) {
 export function fetchUserData(userId) {
   const userRef = usersDatabase.child(userId);
   return dispatch => {
-    dispatch(requestUserData(userId))
+    dispatch(requestUserData('fetchUserData'))
     userRef.once('value').then(
         snap => {
-            const {playlists, ...userData} = snap.val()
-            var userIds = [userId]
-            var userIds = userIds.concat(Object.keys(userData['follows']))
-            dispatch(getAliasFromProfiles(userIds.sort()))
-            // dispatch(receiveUserPlaylists(userId, playlists))
-            dispatch(receiveUserData(userId, userData))
+            const userVal = snap.val()
+            if (userVal === null) {
+                const message = `LyddyError: Could not find user ${userId}`
+                const error = {code: 'USER_NOT_FOUND', param: userId, message}
+                dispatch(handleRequestError(error))  
+            } else {
+                const {playlists, ...userData} = userVal
+                var userIds = [userId]
+                var userIds = userIds.concat(Object.keys(userData['follows']))
+                dispatch(getAliasFromProfiles(userIds.sort()))
+                // dispatch(receiveUserPlaylists(userId, playlists))
+                dispatch(receiveUserData(userId, userData))
+            }
         },
         error => {
             dispatch(handleRequestError(error))
@@ -154,8 +162,45 @@ export function fetchUserData(userId) {
   }
 }
 
-export function toUserId(aliasName) {
-  const userIdRef = database.child(`alias_names/${aliasName}`);
-  return userIdRef.once('value')
+export function getUserDataFromAlias(aliasName) {
+    const userIdRef = database.child(`alias_names/${aliasName}`);
+    return dispatch => {
+        dispatch(requestUserData(aliasName))
+        userIdRef.once('value')
+        .then(snap => {
+            const userId = snap.val()
+            console.log(userId)
+            if (userId === null) {
+                const error = {code: 'USERID_NOT_FOUND', param: aliasName, message: `User '${aliasName}' does not exist.`}
+                dispatch(handleRequestError(error))
+                // throw new Error(`Alias '${aliasName}' doesn't exist`)
+            } else {
+                console.log("USER ID!!!..",userId) 
+                dispatch(fetchUserData(userId))
+            }
+        }, error => console.log(error))
+        // .catch(error => dispatch(handleRequestError(error)))//console.log(error))
+    }
+}
+
+export function getUserIdFromAlias(aliasName) {
+    const userIdRef = database.child(`alias_names/${aliasName}`);
+    return dispatch => {
+        dispatch(requestUserData('getUserIdFromAlias'))
+        userIdRef.once('value')
+        .then(snap => {
+            const userId = snap.val()
+            console.log(userId)
+            if (userId === null) {
+                const error = {code: 'USERID_NOT_FOUND', param: aliasName, message: `LyddyError: User '${aliasName}' does not exist.`}
+                dispatch(handleRequestError(error))
+                // throw new Error(`Alias '${aliasName}' doesn't exist`)
+            } else {
+                let aliasToId = {}
+                aliasToId[aliasName] = userId
+                dispatch(updateAliasMaps(aliasToId))
+            }
+        })
+    }
 }
 

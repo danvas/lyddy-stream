@@ -99,7 +99,7 @@ function fetchPosts(stream, userIds) {
 function shouldFetchPosts(posts) {
   const postsEmpty = Object.keys(posts).length === 0 || posts.items.length === 0
   console.log(posts, posts.items && posts.items.length === 0)
-  console.log(postsEmpty)
+  // console.log(postsEmpty)
   if (postsEmpty) {
     return true
   } else if (posts.isFetching) {
