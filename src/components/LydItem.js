@@ -30,7 +30,7 @@ const LydItem = props => {
           <button onClick={props.onTogglePlay}>{props.playing ? 'Pause' : 'Play'}</button>
           {false && <a href={props.source} target="_blank">source</a>}
           <DateAdded datetime={props.date_added} user={props.userName}/>
-          <button onClick={props.onDelete}>delete</button>
+          {props.onDelete && <button onClick={props.onDelete}>delete</button>}
           <hr></hr>
         </div>
       );
