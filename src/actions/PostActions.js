@@ -18,12 +18,16 @@ export function pushToPlaylist(lydId, index, playlistId) {
 }
 
 export function savePost(values) {
+    console.log(values)
     return dispatch => {
         const newPostRef = lyddiesDatabase.push(values)
+        console.log(newPostRef.key)
+        const writeValues = {...values, lyd_id: newPostRef.key}
+        console.log(writeValues)
+        console.log(newPostRef)
         newPostRef.update({lyd_id: newPostRef.key})
+        .catch(error=>console.log(error))
         dispatch(reset('NewPost'))
-        console.log(auth.currentUser)
-        // dispatch(pushToPlaylist(newPostRef.key))
     }     
 }
 

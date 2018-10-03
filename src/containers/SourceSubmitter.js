@@ -2,19 +2,23 @@ import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { reduxForm } from 'redux-form';
 import { savePost } from '../actions/PostActions';
-// import { getUser } from '../actions/UserActions';
 import UrlSourceForm from '../components/UrlSourceForm';
 
 var moment = require('moment');
 
 const parseFieldValues = values => {
+    console.log(values)
     let name = values.name
     let artists = values.artists
     
     if (!artists){
       const names = values.name.split('-');
-      name = names[1].trim()
-      artists = [names[0].trim()]
+      artists = ['unknown']
+      console.log(names)
+      if (names.length === 2){
+        artists = [names[0].trim()]
+        name = names[1].trim()
+      }
     } else {
       artists = values.artists.split(',')
     }
@@ -49,8 +53,27 @@ class SourceSubmitter extends Component {
 
     onSubmit(values) {
         const { dispatch, user, savePost } = this.props;
-        const newPost = parseFieldValues(values)
+        let newPost = {}
+        try {
+            newPost = parseFieldValues(values)
+        } 
+        catch(error) {
+            console.log(error)
+            let msg = "Oops! There was an error. I'll fix this as soon as I can."
+            
+            if (values.name === undefined) {
+                msg = "Enter a name for the track"
+            }
+
+            if (values.source === undefined) {
+                msg = "Enter the track's URL"
+            }
+
+            window.alert(msg)
+            return
+        }
         newPost.user_id = user.uid
+        console.log(newPost)
         savePost(newPost)
         // pushToPlaylist(newPost.lyd)
     }
@@ -58,6 +81,7 @@ class SourceSubmitter extends Component {
     render() {
         console.log("SourceSubmitter.render... props:", this.props)
         const { handleSubmit, user } = this.props;
+        console.log(user)
         return (
             <div>
                 <UrlSourceForm onSubmitAction={handleSubmit(this.onSubmit.bind(this))} />
@@ -71,8 +95,7 @@ function mapStateToProps(state) {
 }
 
 const mapDispatchToProps = dispatch => ({
-  savePost: lyd => dispatch(savePost(lyd)),
-  // getUser
+  savePost: lyd => dispatch(savePost(lyd))
 })
 
 let form = reduxForm({
@@ -81,6 +104,6 @@ let form = reduxForm({
 
 export default connect(
     mapStateToProps, 
-    { savePost }//, getUser }
+    { savePost }
 )(form);
 
