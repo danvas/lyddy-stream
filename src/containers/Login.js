@@ -10,7 +10,7 @@ import { connect } from 'react-redux';
 class Login extends Component {
 
     constructor(props) {
-        console.log("Login.constructor()...")
+        // console.log("Login.constructor()...")
         super(props);
         this.state = {
             email: '',
@@ -21,7 +21,7 @@ class Login extends Component {
     }
 
     static getDerivedStateFromProps(nextProps, prevState){
-        console.log("Login.getDerivedStateFromProps()...")
+        // console.log("Login.getDerivedStateFromProps()...")
         // console.log(nextProps)
         const { user, history } = nextProps;
         if (user.loggedIn && !user.isLoading) {
@@ -32,7 +32,7 @@ class Login extends Component {
     }
 
     submitLogin(event) {
-        console.log("Login.submitLogin()...")
+        // console.log("Login.submitLogin()...")
         event.preventDefault();
         const { login, getUserData, selectStream } = this.props
         login(this.state.email, this.state.password)
@@ -49,7 +49,7 @@ class Login extends Component {
     }
 
     componentDidUpdate() {
-        console.log("Login.componentDIDUpdate...")
+        // console.log("Login.componentDIDUpdate...")
         const { getUserData, selectStream, user } = this.props
         if (user.uid) {
             getUserData(user.uid)
@@ -80,7 +80,7 @@ class Login extends Component {
     }
 
     render() {
-        console.log("Login.RENDER()...", this.props)
+        // console.log("Login.RENDER()...", this.props)
         const { user, history } = this.props
         if (user.isLoading) {
             return <div><h2>Loading...</h2></div>

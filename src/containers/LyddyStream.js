@@ -83,20 +83,20 @@ class LyddyStream extends Component {
       return
     }
     if (user.error.code) {
-      console.log("ERROR!! ", user.error)
+      if (user.error.code === 'USER_UNAUTHENTICATED') {
+        history.replace('/login')
+      }
       return
     }
 
     let streamKey = ''
-    let userId = user.uid
     const userAlias = match.params['user_alias']
     if (userAlias) {
-      userId = user.aliasToId[userAlias] || userAlias
+      const userId = user.aliasToId[userAlias] || userAlias
       streamKey = user.aliasToId[userAlias] || ''
-    }
-
-    if (!(userId in user.profiles)) {
-      getUserData(userId)
+      if (!(userId in user.profiles)) {
+        getUserData(userId)
+      }
     }
 
     if (streamKey !== selectedStream) {
@@ -173,13 +173,15 @@ class LyddyStream extends Component {
     const { queueIdx, playing, queuedIds, currentId } = player
     console.log("LyddyStream.RENDER()...", this.props)
     // console.log(this.state)
+    const currentLyd = posts.find(post=> post.lyd_id === player.currentId)
+    console.log(currentLyd)
     const aliasNames = Object.values(user.idToAlias) 
     const renderPostButton = user.loggedIn && ((user.uid === selectedStream) || (selectedStream === ''))
-    const hasError = user.error.code !== undefined
+    const hasError = (user.error.code !== undefined) && (user.error.code !== 'USER_UNAUTHENTICATED')
     return (
       <div>
-       {!hasError && user.loggedIn && <button onClick={this.handleLogout}>Sign out</button>}
-       {!hasError && !user.loggedIn && <a href="/login">Sign in</a>}
+       {user.loggedIn && <button onClick={this.handleLogout}>Sign out</button>}
+       {!user.loggedIn && <a href="/login">Sign in</a>}
        {aliasNames.length > 0 && 
         <Picker
                 value={user.idToAlias[selectedStream] || ''}
@@ -206,9 +208,9 @@ class LyddyStream extends Component {
         {hasError && <div><h2>Sorry, this page isn't available.</h2><p>The link you followed may be broken, or the page may have been removed. Go back to <a href='/'>homepage</a>.</p></div>}
         {!hasError && queuedIds.length > 0 &&
           <div style={{ opacity: isFetching ? 0.5 : 1 }}>
-          {player.currentId && <MainPlayer lyd={posts.find(post=> post.lyd_id === player.currentId)}/>}
+          {player.currentId && <MainPlayer lyd={currentLyd}/>}
           <hr></hr>
-          <LydList idToAlias={user.idToAlias} posts={posts} playingLydId={currentId} />
+          <LydList authUserId={user.uid} idToAlias={user.idToAlias} posts={posts} playingLydId={currentId} />
           </div>}
       </div>
     )

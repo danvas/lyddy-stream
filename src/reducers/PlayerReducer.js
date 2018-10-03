@@ -59,8 +59,8 @@ export const playerReducer = (state=defaultState, action) => {
         case UPDATE_QUEUE:
             queuedIds = action.queuedIds
             queueIdx = queuedIds.findIndex(id => id === state.currentId)
-            currentId = queuedIds[queueIdx]
-            return {...state, queuedIds, currentId}
+            currentId = queuedIds[queueIdx] || state.currentId
+            return {...state, queuedIds, queueIdx, currentId}
         
         default:
             return state;

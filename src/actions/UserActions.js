@@ -28,8 +28,14 @@ export function getUser() {
         dispatch(requestUserData('authentication'))
         auth.onAuthStateChanged(
             user => {
-                dispatch({type: GET_USER, payload: user})
-                dispatch(fetchUserData(user.uid))
+                if (user) {
+                    dispatch({type: GET_USER, payload: user})
+                    dispatch(fetchUserData(user.uid))
+                } else {
+                    const message = "LyddyError: User not authenticated"
+                    const error = {code: 'USER_UNAUTHENTICATED', param: null, message}
+                    dispatch(handleRequestError(error))
+                }
             },
             error => {console.log(error)}
         )
