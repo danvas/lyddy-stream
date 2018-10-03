@@ -28,8 +28,8 @@ export function getUser() {
         dispatch(requestUserData('authentication'))
         auth.onAuthStateChanged(
             user => {
-                // console.log("dispatching GET_USER! ", user)
-                dispatch({type: GET_USER, payload: user})     
+                dispatch({type: GET_USER, payload: user})
+                dispatch(fetchUserData(user.uid))
             },
             error => {console.log(error)}
         )
@@ -112,7 +112,6 @@ export function getAliasFromProfiles(userIds) {
     // console.log(userIds, firstId, lastId)
     const aliasNamesRef = usersDatabase.orderByKey().startAt(firstId)//.endAt(lastId)
     return dispatch => {    
-        console.log("ALIAS fetched!!!", )
         dispatch(requestUserData('getAliasFromProfiles'))
         aliasNamesRef.once('value')
         .then(snap => {
@@ -151,7 +150,6 @@ export function fetchUserData(userId) {
                 var userIds = [userId]
                 var userIds = userIds.concat(Object.keys(userData['follows']))
                 dispatch(getAliasFromProfiles(userIds.sort()))
-                // dispatch(receiveUserPlaylists(userId, playlists))
                 dispatch(receiveUserData(userId, userData))
             }
         },
@@ -173,13 +171,11 @@ export function getUserDataFromAlias(aliasName) {
             if (userId === null) {
                 const error = {code: 'USERID_NOT_FOUND', param: aliasName, message: `User '${aliasName}' does not exist.`}
                 dispatch(handleRequestError(error))
-                // throw new Error(`Alias '${aliasName}' doesn't exist`)
             } else {
                 console.log("USER ID!!!..",userId) 
                 dispatch(fetchUserData(userId))
             }
         }, error => console.log(error))
-        // .catch(error => dispatch(handleRequestError(error)))//console.log(error))
     }
 }
 
@@ -190,7 +186,6 @@ export function getUserIdFromAlias(aliasName) {
         userIdRef.once('value')
         .then(snap => {
             const userId = snap.val()
-            console.log(userId)
             if (userId === null) {
                 const error = {code: 'USERID_NOT_FOUND', param: aliasName, message: `LyddyError: User '${aliasName}' does not exist.`}
                 dispatch(handleRequestError(error))

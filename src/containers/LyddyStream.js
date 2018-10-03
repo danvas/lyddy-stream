@@ -17,6 +17,7 @@ import PageNotFound from '../components/PageNotFound';
 import { MainPlayer } from './PlayerContainer' 
 import SourceSubmitter from '../containers/SourceSubmitter'
 import { auth, usersDatabase, database }  from '../Firebase';
+
 class LyddyStream extends Component {
   constructor(props) {
     console.log("LyddyStream.constructor()...")
@@ -48,7 +49,7 @@ class LyddyStream extends Component {
 
 
   getStreamUserIds(streamKey, profiles, authUserId) {
-    console.log("getStreamUserIds: ", `'${streamKey}'`, profiles, authUserId)
+    // console.log("getStreamUserIds: ", `'${streamKey}'`, profiles, authUserId)
     let userIds = []
     let userId = streamKey || authUserId
     if (!userId || Object.keys(profiles).length === 0 || !profiles[userId]) {
@@ -64,17 +65,11 @@ class LyddyStream extends Component {
     return userIds
   }
 
-  static getDerivedStateFromProps(nextProps, prevState){
-    console.log("LyddyStream.getDerivedStateFromProps()...", nextProps)
-    const { user, history, match, getUserDataFromAlias, getUserCred, selectStream } = nextProps;
-    
-    const inErrorState = user.error.code && (user.error.param !== prevState.erroredParam)
-    if (inErrorState) {
-      return {'erroredParam': user.error.param}
-    }
-
-    return null
-  }
+  // static getDerivedStateFromProps(nextProps, prevState){
+  //   console.log("LyddyStream.getDerivedStateFromProps()...", nextProps)
+  //   const { user, userRequestError, history, match, getUserDataFromAlias, getUserCred, selectStream } = nextProps;
+  //   return null
+  // }
 
   componentDidUpdate(prevProps) {
     console.log("LyddyStream.componentDidUPDATE()...")
@@ -87,6 +82,10 @@ class LyddyStream extends Component {
     if (user.pendRequests.length > 0) {
       return
     }
+    if (user.error.code) {
+      console.log("ERROR!! ", user.error)
+      return
+    }
 
     let streamKey = ''
     let userId = user.uid
@@ -96,9 +95,6 @@ class LyddyStream extends Component {
       streamKey = user.aliasToId[userAlias] || ''
     }
 
-    if (this.state.erroredParam === userId) {
-      return
-    }
     if (!(userId in user.profiles)) {
       getUserData(userId)
     }
@@ -123,7 +119,7 @@ class LyddyStream extends Component {
     const queuedIdsOrig = queuedIds.slice()
     const hasChanged = !_.isEqual(postsIdsOrig.sort(), queuedIdsOrig.sort())
     if (hasChanged){
-      console.log("REFRESH QUEUE!!! ", postsIds)
+      // console.log("REFRESH QUEUE!!! ", postsIds)
       updateQueue(postsIds)
     }
   }
@@ -136,15 +132,19 @@ class LyddyStream extends Component {
 
   handleChange(nextStream) {
     console.log("LyddyStream.handleChange()...", `'${nextStream}'`)
-    const { getUserData, selectStream, selectedStream, fetchPosts, history, user } = this.props
+    const { getUserData, userRequestError, selectStream, selectedStream, fetchPosts, history, user } = this.props
+    const doErrorReset = Object.keys(user.error).length > 0 && (user.error.param !== nextStream)
+    if (doErrorReset){
+      userRequestError({})
+    }
     history.push(`/${nextStream}`);
   }
 
   refreshPosts() {
     const { selectedStream, fetchPosts, invalidateStream, user } = this.props
     invalidateStream(selectedStream)
-    const userIds = [selectedStream].concat(user.follows)
-    // fetchPosts(userIds)
+    const userIds = this.getStreamUserIds(selectedStream, user.profiles, user.uid)
+    fetchPosts(selectedStream, userIds)
   }
 
   handleFetchClick(e) {
@@ -153,17 +153,13 @@ class LyddyStream extends Component {
     console.log(this.props) 
     const { fetchPosts, selectedStream, user } = this.props
     let userIds = this.getStreamUserIds(selectedStream, user.profiles, user.uid)
-    // fetchPosts(selectedStream, userIds)
+    fetchPosts(selectedStream, userIds)
   }
 
   handleRefreshClick(e) {
     console.log("LyddyStream.handleRefreshClick()...")
     e.preventDefault()
     this.refreshPosts()
-    // const { selectedStream, fetchPosts, invalidateStream, user } = this.props
-    // invalidateStream(selectedStream)
-    // const userIds = [selectedStream].concat(user.follows)
-    // // fetchPosts(userIds)
   }
 
   toggleModal = () => {
@@ -173,23 +169,22 @@ class LyddyStream extends Component {
   }
 
   render() {
-    const { userRequestError, selectedStream, posts, user, isFetching, lastUpdated, player, logOut } = this.props
+    const { selectedStream, posts, user, isFetching, lastUpdated, player, logOut } = this.props
     const { queueIdx, playing, queuedIds, currentId } = player
     console.log("LyddyStream.RENDER()...", this.props)
-    console.log(this.state)
-    // if (user.error['code'] === 'PERMISSION_DENIED') {
-    // console.log("loading? logged in?", user.isLoading, isLoggedIn())
+    // console.log(this.state)
     const aliasNames = Object.values(user.idToAlias) 
-
+    const renderPostButton = user.loggedIn && ((user.uid === selectedStream) || (selectedStream === ''))
+    const hasError = user.error.code !== undefined
     return (
       <div>
-       {user.loggedIn && <button onClick={this.handleLogout}>Sign out</button>}
-       {!user.loggedIn && <a href="/login">Sign in</a>}
+       {!hasError && user.loggedIn && <button onClick={this.handleLogout}>Sign out</button>}
+       {!hasError && !user.loggedIn && <a href="/login">Sign in</a>}
        {aliasNames.length > 0 && 
         <Picker
                 value={user.idToAlias[selectedStream] || ''}
                 onChange={this.handleChange}
-                options={['','home', 'errored'].concat(aliasNames)}
+                options={['','nielvas/following', 'accounts', 'errored'].concat(aliasNames)}
               />
         }
         <p>
@@ -204,12 +199,12 @@ class LyddyStream extends Component {
             </a>}
         </p>
         {false && <p><a href="#" onClick={this.handleFetchClick}>Test!</a></p>}
-        {!this.state.erroredParam && user.loggedIn && <button onClick={this.toggleModal}>{this.state.postModalIsOpen? "cancel" : "New track"}</button>}
-        <PostLydModal show={this.state.postModalIsOpen} onClose={this.toggleModal}></PostLydModal>
-        {user.isLoading && queuedIds.length === 0 && <h2>Loading...</h2>}
-        {(!this.state.erroredParam && !user.isLoading && queuedIds.length === 0 && user.loggedIn) && <h2>Empty.</h2>}
-        {this.state.erroredParam && <div><h2>Sorry, this page isn't available.</h2><p>The link you followed may be broken, or the page may have been removed. Go back to <a href='/'>homepage</a>.</p></div>}
-        {!this.state.erroredParam && queuedIds.length > 0 &&
+        {renderPostButton && !hasError && user.loggedIn && <button onClick={this.toggleModal}>{this.state.postModalIsOpen? "cancel" : "New track"}</button>}
+        {renderPostButton && <PostLydModal show={this.state.postModalIsOpen} onClose={this.toggleModal}></PostLydModal>}
+        {(user.pendRequests.length > 0) && queuedIds.length === 0 && <h2>Loading...</h2>}
+        {(!hasError && !(user.pendRequests.length > 0) && queuedIds.length === 0 && user.loggedIn) && <h2>Empty.</h2>}
+        {hasError && <div><h2>Sorry, this page isn't available.</h2><p>The link you followed may be broken, or the page may have been removed. Go back to <a href='/'>homepage</a>.</p></div>}
+        {!hasError && queuedIds.length > 0 &&
           <div style={{ opacity: isFetching ? 0.5 : 1 }}>
           {player.currentId && <MainPlayer lyd={posts.find(post=> post.lyd_id === player.currentId)}/>}
           <hr></hr>
