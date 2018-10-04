@@ -174,7 +174,6 @@ class LyddyStream extends Component {
     console.log("LyddyStream.RENDER()...", this.props)
     // console.log(this.state)
     const currentLyd = posts.find(post=> post.lyd_id === player.currentId)
-    console.log(currentLyd)
     const aliasNames = Object.values(user.idToAlias) 
     const renderPostButton = user.loggedIn && ((user.uid === selectedStream) || (selectedStream === ''))
     const hasError = (user.error.code !== undefined) && (user.error.code !== 'USER_UNAUTHENTICATED')

@@ -8,13 +8,7 @@ export const HANDLE_FETCH_ERROR = 'HANDLE_FETCH_ERROR'
 var moment = require('moment')
 
 function getSortedPosts(posts) {
-  // const postValues = posts? Object.values(posts) : []
-  let postValues = posts.slice()
-  let post = null
-  // for (post in posts) {
-  //   postValues.push({'lyd_id':post, ...posts[post]})
-  // }
-
+  const postValues = posts.slice()
   const sortedValues = postValues.sort((a,b) => {
     return moment(b.date_added).valueOf() - moment(a.date_added).valueOf()})
   return sortedValues
@@ -67,32 +61,61 @@ export function receivePosts(stream, posts) {
 }
 
 function fetchPosts(stream, userIds) {
-  console.log("!!!!!!!!!! FETCHING POSTS! : ", stream, userIds)
-  
-  // let postRef = lyddiesDatabase.orderByChild('name').limitToFirst(200)
-  // postRef = lyddiesDatabase.orderByChild('date_added').limitToFirst(200)
+  var postsQuery
+  // console.log(userIds, firstId, lastId)
+  if (userIds.length === 1) {
+    postsQuery = postsDatabase.orderByKey().equalTo(userIds[0])
+  } else {
+    userIds.sort()
+    const firstId = userIds[0]
+    const lastId = userIds[userIds.length - 1]
+    postsQuery = postsDatabase.orderByKey().startAt(firstId).endAt(lastId)
+  }
+
+  const keepPost = (userId, post) => {
+    // 1) Always fetch authenticated user's post
+    const authUserId = auth.currentUser && auth.currentUser.uid
+    if (userId === authUserId) {
+      return true
+    }
+    // 2) PRECONDITION: If the list userIds has more than 1 item, those extra items were
+    //                  derived from the authenticated user's 'follows' list.
+    if (userIds.includes(userId)) {
+      if (authUserId !== null) {
+        return true
+      }
+      // If user not authenticated, fetch only if post is public.
+      return post.public
+    }
+
+    return false
+  }
+
   return dispatch => {
+    // console.log("!!!!!!!!!! FETCHING POSTS! : ", stream, userIds, auth.currentUser)
     dispatch(requestPosts(stream))
-    lyddiesDatabase.limitToFirst(200).on('value', 
-                        snap => {
-                            let posts = []
-                            var post
-                            var postId
-                            // console.log(snap.val())
-                            snap.forEach(data => {
-                              post = data.val()
-                              // console.log(post)
-                              // console.log(userIds.includes(post.user_id), post.public)
-                              const isValid = userIds.includes(post.user_id) //|| post.public
-                              if (isValid) {
-                                posts.push({...post, 'lyd_id': data.key})
-                              }
-                            })
-                            posts.reverse()
-                            dispatch(receivePosts(stream, posts))
-                        },
-                        error => dispatch(handleFetchError(stream || 'home', error))
-                        );
+    postsQuery.on('value', 
+                postsSnapshot => {
+                    let posts = []
+                    var post
+                    // console.log(postsSnapshot.val())
+                    postsSnapshot.forEach(userSnap => {
+                      userSnap.forEach(postSnap => {
+                        post = postSnap.val()
+                        // console.log(postSnap.key)
+                        // console.log(postSnap.key, userIds.includes(userSnap.key), post.public, auth.currentUser && auth.currentUser.uid)
+                        const shouldKeep = keepPost(userSnap.key, post)
+                        // console.log(postSnap.key, shouldKeep)
+                        if (shouldKeep) {
+                          posts.push({...post, 'lyd_id': postSnap.key})
+                        }
+                      })
+                    })
+                    const sortedPosts = getSortedPosts(posts)
+                    dispatch(receivePosts(stream, sortedPosts))
+                },
+                error => dispatch(handleFetchError(stream || 'home', error))
+                );
   }
 }
 
