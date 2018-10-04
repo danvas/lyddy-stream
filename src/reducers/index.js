@@ -36,7 +36,8 @@ function posts(
       return Object.assign({}, state, {
         isFetching: false,
         didInvalidate: false,
-        items: []
+        items: [],
+        error: action.error
       })
     case INVALIDATE_STREAM:
       return Object.assign({}, state, {

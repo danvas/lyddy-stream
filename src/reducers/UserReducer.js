@@ -8,8 +8,11 @@ import {
     RECEIVE_USER_STREAM
 } from '../actions/UserActions';
 
-export default function(state={pendRequests: [], numRequest: 0, numReceive: 0 , isLoading: true, loggedIn: false, 
-    profiles: {}, streams: {}, aliasToId: {}, idToAlias: {}, error: {}}, action) {
+const defState = {pendRequests: [], numRequest: 0, numReceive: 0,
+    isLoading: true, loggedIn: false, profiles: {}, streams: {},
+    aliasToId: {}, idToAlias: {}, error: {}}
+
+export default function(state=defState, action) {
     // console.log(action.userData)
     // console.log(state, action.payload)
     var pendRequests
@@ -58,14 +61,17 @@ export default function(state={pendRequests: [], numRequest: 0, numReceive: 0 , 
                 props.forEach(prop => currentUser[prop] = payload[prop])
                 return {...state, error: {}, isLoading: false, ...currentUser, pendRequests, loggedIn}
             } else {
-                const aliasToId = {...state.aliasToId}
-                return {...state, error: {}, isLoading: false, pendRequests, loggedIn}
+                return {...defState, isLoading: false, pendRequests}
             }
             
         case RECEIVE_USER_DATA:
             var profiles = {...state.profiles}
             profiles[action.userId] = {...action.userData}
-            return {...state, error: {}, isLoading: false, numReceive: state.numReceive + 1, pendRequests, profiles}
+            let isPublic = false
+            if (action.userId === action.authUserId) {
+                isPublic = action.userData.public
+            }
+            return {...state, error: {}, isLoading: false, numReceive: state.numReceive + 1, pendRequests, profiles, isPublic}
 
         case RECEIVE_USER_STREAM:
             var streams = {...state.streams}

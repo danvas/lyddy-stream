@@ -6,7 +6,7 @@ import UrlSourceForm from '../components/UrlSourceForm';
 
 var moment = require('moment');
 
-const parseFieldValues = values => {
+const parseFieldValues = (values, isPublic) => {
     console.log(values)
     let name = values.name
     let artists = values.artists
@@ -31,7 +31,7 @@ const parseFieldValues = values => {
         hashtags: [""],
         date_added: moment().format(),
         liked_by: [""],
-        public: true,
+        public: isPublic,
     };
 
     return newPost
@@ -55,7 +55,7 @@ class SourceSubmitter extends Component {
         const { dispatch, user, savePost } = this.props;
         let newPost = {}
         try {
-            newPost = parseFieldValues(values)
+            newPost = parseFieldValues(values, user.isPublic)
         } 
         catch(error) {
             console.log(error)
@@ -72,9 +72,9 @@ class SourceSubmitter extends Component {
             window.alert(msg)
             return
         }
-        newPost.user_id = user.uid
+        // newPost.user_id = user.uid
         console.log(newPost)
-        savePost(newPost)
+        savePost(user.uid, newPost)
         // pushToPlaylist(newPost.lyd)
     }
 

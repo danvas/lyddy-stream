@@ -177,10 +177,11 @@ class LyddyStream extends Component {
     const aliasNames = Object.values(user.idToAlias) 
     const renderPostButton = user.loggedIn && ((user.uid === selectedStream) || (selectedStream === ''))
     const hasError = (user.error.code !== undefined) && (user.error.code !== 'USER_UNAUTHENTICATED')
+    const isPrivate = (user.profiles[selectedStream] && !user.profiles[selectedStream]['public']) && !user.loggedIn
     return (
       <div>
        {user.loggedIn && <button onClick={this.handleLogout}>Sign out</button>}
-       {!user.loggedIn && <a href="/login">Sign in</a>}
+       {!isPrivate && !user.loggedIn && <a href="/login">Sign in</a>}
        {aliasNames.length > 0 && 
         <Picker
                 value={user.idToAlias[selectedStream] || ''}
@@ -189,12 +190,12 @@ class LyddyStream extends Component {
               />
         }
         <p>
-          {lastUpdated &&
+          {false && lastUpdated &&
             <span>
               Last updated at {new Date(lastUpdated).toLocaleTimeString()}.
               {' '}
             </span>}
-          {!isFetching &&
+          {false && !isFetching &&
             <a href="#" onClick={this.handleRefreshClick}>
               Refresh
             </a>}
@@ -204,12 +205,13 @@ class LyddyStream extends Component {
         {renderPostButton && <PostLydModal show={this.state.postModalIsOpen} onClose={this.toggleModal}></PostLydModal>}
         {(user.pendRequests.length > 0) && queuedIds.length === 0 && <h2>Loading...</h2>}
         {(!hasError && !(user.pendRequests.length > 0) && queuedIds.length === 0 && user.loggedIn) && <h2>Empty.</h2>}
+        {!hasError && isPrivate && <div><h2>This account is private.</h2><p>Already follow {user.idToAlias[selectedStream]}? <a href='/login'>Sign in</a> to see their posts.</p></div>}
         {hasError && <div><h2>Sorry, this page isn't available.</h2><p>The link you followed may be broken, or the page may have been removed. Go back to <a href='/'>homepage</a>.</p></div>}
-        {!hasError && queuedIds.length > 0 &&
+        {!hasError &&
           <div style={{ opacity: isFetching ? 0.5 : 1 }}>
           {player.currentId && <MainPlayer lyd={currentLyd}/>}
           <hr></hr>
-          <LydList authUserId={user.uid} idToAlias={user.idToAlias} posts={posts} playingLydId={currentId} />
+          <LydList isPlaying={player.playing} authUserId={user.uid} idToAlias={user.idToAlias} posts={posts} currentId={player.currentId} />
           </div>}
       </div>
     )

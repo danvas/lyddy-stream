@@ -1,4 +1,4 @@
-import { auth, usersDatabase, lyddiesDatabase, database } from '../Firebase';
+import { auth, usersDatabase, lyddiesDatabase, postsDatabase, database } from '../Firebase';
 import { reset } from 'redux-form';
 import { updateQueue } from './PlayerActions'
 
@@ -17,15 +17,15 @@ export function pushToPlaylist(lydId, index, playlistId) {
     }     
 }
 
-export function savePost(values) {
+export function savePost(userId, values) {
     console.log(values)
     return dispatch => {
-        const newPostRef = lyddiesDatabase.push(values)
-        console.log(newPostRef.key)
-        const writeValues = {...values, lyd_id: newPostRef.key}
-        console.log(writeValues)
-        console.log(newPostRef)
-        newPostRef.update({lyd_id: newPostRef.key})
+        const newPostRef = postsDatabase.child(userId).push(values)
+        // console.log(newPostRef.key)
+        // const writeValues = {...values, lyd_id: newPostRef.key}
+        // console.log(writeValues)
+        // console.log(newPostRef)
+        // newPostRef.update({lyd_id: newPostRef.key})
         .catch(error=>console.log(error))
         dispatch(reset('NewPost'))
     }     
@@ -51,8 +51,8 @@ export function updateAllPrivacy(userId, isPublic) {
 }
 
 
-export function deletePost(id) {
-    return dispatch => lyddiesDatabase.child(id).remove();
+export function deletePost(userId, postId) {
+    return dispatch => postsDatabase.child(`${userId}/${postId}`).remove();
 }
 
 // For console...

@@ -71,10 +71,10 @@ function fetchPosts(stream, userIds) {
     const lastId = userIds[userIds.length - 1]
     postsQuery = postsDatabase.orderByKey().startAt(firstId).endAt(lastId)
   }
-
+ 
+  const authUserId = auth.currentUser && auth.currentUser.uid
   const keepPost = (userId, post) => {
     // 1) Always fetch authenticated user's post
-    const authUserId = auth.currentUser && auth.currentUser.uid
     if (userId === authUserId) {
       return true
     }
@@ -98,33 +98,38 @@ function fetchPosts(stream, userIds) {
                 postsSnapshot => {
                     let posts = []
                     var post
-                    // console.log(postsSnapshot.val())
                     postsSnapshot.forEach(userSnap => {
                       userSnap.forEach(postSnap => {
                         post = postSnap.val()
-                        // console.log(postSnap.key)
-                        // console.log(postSnap.key, userIds.includes(userSnap.key), post.public, auth.currentUser && auth.currentUser.uid)
                         const shouldKeep = keepPost(userSnap.key, post)
-                        // console.log(postSnap.key, shouldKeep)
                         if (shouldKeep) {
-                          posts.push({...post, 'lyd_id': postSnap.key})
+                          const lyd = {...post, 'user_id': userSnap.key, 'lyd_id': postSnap.key}
+                          posts.push(lyd)
                         }
                       })
                     })
-                    const sortedPosts = getSortedPosts(posts)
-                    dispatch(receivePosts(stream, sortedPosts))
+
+                    if (posts.length === 0){
+                      const message = "LyddyError: No posts found."
+                      const error = {code: 'POSTS_EMPTY', param: stream, message}
+                      dispatch(handleFetchError(stream, error))
+                    } else {
+                      const sortedPosts = getSortedPosts(posts)
+                      dispatch(receivePosts(stream, sortedPosts))
+                    }
                 },
                 error => dispatch(handleFetchError(stream || 'home', error))
-                );
+                )
   }
 }
 
 function shouldFetchPosts(posts) {
   const postsEmpty = Object.keys(posts).length === 0 || posts.items.length === 0
-  console.log(posts, posts.items && posts.items.length === 0)
+  const postsUnavailable = posts.error && (posts.error.code === "POSTS_EMPTY")
+  // console.log(posts, posts.items && posts.items.length === 0, postsUnavailable)
   // console.log(postsEmpty)
   if (postsEmpty) {
-    return true
+    return !postsUnavailable
   } else if (posts.isFetching) {
     return false
   } else {

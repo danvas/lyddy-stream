@@ -49,10 +49,12 @@ function requestUserData(item) {
   }
 }
 function receiveUserData(userId, userData) {
+  const authUserId = auth.currentUser && auth.currentUser.uid
   return {
     type: RECEIVE_USER_DATA,
+    authUserId,
     userId,
-    userData
+    userData,
   }
 }
 function receiveUserPlaylists(userId, streams) {
@@ -75,15 +77,12 @@ export function login(username, password) {
 }
 
 export function logOut() {
-    console.log("trying logOut... auth.currentUser: ", auth.currentUser)
     return dispatch => {
         dispatch(requestUserData('signout'))
         auth.signOut()
         .then(snap => {
-            console.log("logged out!", snap)
             dispatch({type: GET_USER, payload: snap})
         })
-        .catch(err => console.log("error loggin out??:", err))
     }
 }
 
