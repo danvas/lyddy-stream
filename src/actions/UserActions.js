@@ -49,10 +49,8 @@ function requestUserData(item) {
   }
 }
 function receiveUserData(userId, userData) {
-  const authUserId = auth.currentUser && auth.currentUser.uid
   return {
     type: RECEIVE_USER_DATA,
-    authUserId,
     userId,
     userData,
   }

@@ -48,10 +48,11 @@ class LyddyStream extends Component {
   }
 
 
-  getStreamUserIds(streamKey, profiles, authUserId) {
+  getStreamUserIds(streamKey, user) {
     // console.log("getStreamUserIds: ", `'${streamKey}'`, profiles, authUserId)
     let userIds = []
-    let userId = streamKey || authUserId
+    const profiles = user.profiles
+    let userId = streamKey || user.uid
     if (!userId || Object.keys(profiles).length === 0 || !profiles[userId]) {
       return userIds
     }
@@ -103,7 +104,7 @@ class LyddyStream extends Component {
       selectStream(streamKey)
     }
 
-    const userIds = this.getStreamUserIds(streamKey, user.profiles, user.uid)
+    const userIds = this.getStreamUserIds(streamKey, user)
     fetchPosts(streamKey, userIds)
     this.refreshQueuedIds(posts, player.queuedIds)
   }
@@ -143,7 +144,7 @@ class LyddyStream extends Component {
   refreshPosts() {
     const { selectedStream, fetchPosts, invalidateStream, user } = this.props
     invalidateStream(selectedStream)
-    const userIds = this.getStreamUserIds(selectedStream, user.profiles, user.uid)
+    const userIds = this.getStreamUserIds(selectedStream, user)
     fetchPosts(selectedStream, userIds)
   }
 
@@ -152,7 +153,7 @@ class LyddyStream extends Component {
     e.preventDefault()
     console.log(this.props) 
     const { fetchPosts, selectedStream, user } = this.props
-    let userIds = this.getStreamUserIds(selectedStream, user.profiles, user.uid)
+    let userIds = this.getStreamUserIds(selectedStream, user)
     fetchPosts(selectedStream, userIds)
   }
 

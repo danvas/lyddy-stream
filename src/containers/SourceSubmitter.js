@@ -55,7 +55,8 @@ class SourceSubmitter extends Component {
         const { dispatch, user, savePost } = this.props;
         let newPost = {}
         try {
-            newPost = parseFieldValues(values, user.isPublic)
+            const isPublic = user.profiles[user.uid]['public']
+            newPost = parseFieldValues(values, isPublic)
         } 
         catch(error) {
             console.log(error)

@@ -67,11 +67,7 @@ export default function(state=defState, action) {
         case RECEIVE_USER_DATA:
             var profiles = {...state.profiles}
             profiles[action.userId] = {...action.userData}
-            let isPublic = false
-            if (action.userId === action.authUserId) {
-                isPublic = action.userData.public
-            }
-            return {...state, error: {}, isLoading: false, numReceive: state.numReceive + 1, pendRequests, profiles, isPublic}
+            return {...state, error: {}, isLoading: false, numReceive: state.numReceive + 1, pendRequests, profiles}
 
         case RECEIVE_USER_STREAM:
             var streams = {...state.streams}
