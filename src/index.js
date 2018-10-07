@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 import LyddyStream from './containers/LyddyStream';
+import Social from './containers/Social';
 import registerServiceWorker from './registerServiceWorker';
 import { createLogger } from 'redux-logger'
 import { applyMiddleware, createStore } from 'redux';
@@ -30,6 +31,7 @@ const App = () => (
                 <Route path="/create-account" component={CreateAccount} />
                 <Route path="/login" component={Login} />
                 <Route path="/:user_alias/playlists/:playlist" component={LyddyStream} />
+                <Route path="/:user_alias/:social(followers|following)" component={Social} />
                 <Route path="/:user_alias" component={LyddyStream} />
                 <Route path="/" component={LyddyStream} />  
             </Switch>

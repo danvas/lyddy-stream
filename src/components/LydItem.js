@@ -12,12 +12,12 @@ export const HashTagsList = ({ hashtags }) => {
   });
 }
 
-export const DateAdded = ({ datetime, user}) => {
+export const DateAdded = ({ datetime, user, source}) => {
   const formattedDate = (datetime ? 
                       `Added ${moment(datetime).fromNow()}` 
                       : '');
   const userLink = `/${user}` 
-  return <p><sub>{formattedDate} by <a href={userLink}>{user}</a></sub></p>
+  return <p><sub>{formattedDate} by <a href={userLink}>{user}</a><a href={source} target="_blank"> ↗</a></sub></p>
 }
 
 const LydItem = props => {
@@ -29,7 +29,7 @@ const LydItem = props => {
           <HashTagsList hashtags={props.hashtags} />
           <button onClick={props.onTogglePlay}>{props.playing ? 'Pause' : 'Play'}</button>
           {false && <a href={props.source} target="_blank">source</a>}
-          <DateAdded datetime={props.date_added} user={props.userName}/>
+          <DateAdded datetime={props.date_added} source={props.source} user={props.userName}/>
           {props.onDelete && <button onClick={props.onDelete}>delete</button>}
           <hr></hr>
         </div>

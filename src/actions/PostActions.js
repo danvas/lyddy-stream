@@ -21,11 +21,6 @@ export function savePost(userId, values) {
     console.log(values)
     return dispatch => {
         const newPostRef = postsDatabase.child(userId).push(values)
-        // console.log(newPostRef.key)
-        // const writeValues = {...values, lyd_id: newPostRef.key}
-        // console.log(writeValues)
-        // console.log(newPostRef)
-        // newPostRef.update({lyd_id: newPostRef.key})
         .catch(error=>console.log(error))
         dispatch(reset('NewPost'))
     }     

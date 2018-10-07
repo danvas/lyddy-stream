@@ -2,6 +2,7 @@ import { combineReducers } from 'redux';
 import { reducer as formReducer } from 'redux-form';
 import { playerReducer } from './PlayerReducer';
 import UserReducer from './UserReducer'
+import SocialReducer from './SocialReducer'
 
 import {
   SELECT_STREAM,
@@ -81,6 +82,7 @@ const rootReducer = combineReducers({
     form: formReducer,
     player: playerReducer,
     user: UserReducer,
+    social: SocialReducer,
     postsByStream,
     selectedStream
 })

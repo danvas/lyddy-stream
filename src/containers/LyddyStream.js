@@ -7,7 +7,8 @@ import {
   fetchPostsIfNeeded,
   invalidateStream
 } from '../actions'
-import { getUserIdFromAlias, handleRequestError, isLoggedIn, getUser, getUserDataFromAlias, fetchUserData, logOut, toUserId } from '../actions/UserActions'
+import { getUserIdFromAlias, handleRequestError, isLoggedIn, getUser, 
+  getUserDataFromAlias, fetchUserData, logOut } from '../actions/UserActions'
 import { updateQueue } from '../actions/PlayerActions'
 import Picker from '../components/Picker'
 import { LydList } from '../containers/LydList'
@@ -17,6 +18,40 @@ import PageNotFound from '../components/PageNotFound';
 import { MainPlayer } from './PlayerContainer' 
 import SourceSubmitter from '../containers/SourceSubmitter'
 import { auth, usersDatabase, database }  from '../Firebase';
+
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null, errorInfo: null };
+  }
+  
+  componentDidCatch(error, errorInfo) {
+    // Catch errors in any components below and re-render with error message
+    this.setState({
+      error: error,
+      errorInfo: errorInfo
+    })
+    // You can also log error messages to an error reporting service here
+  }
+  
+  render() {
+    if (this.state.errorInfo) {
+      // Error path
+      return (
+        <div>
+          <h2>Something went wrong.</h2>
+          <details style={{ whiteSpace: 'pre-wrap' }}>
+            {this.state.error && this.state.error.toString()}
+            <br />
+            {this.state.errorInfo.componentStack}
+          </details>
+        </div>
+      );
+    }
+    // Normally, just render children
+    return this.props.children;
+  }  
+}
 
 class LyddyStream extends Component {
   constructor(props) {
@@ -28,7 +63,7 @@ class LyddyStream extends Component {
     this.handleChange = this.handleChange.bind(this)
     this.handleLogout = this.handleLogout.bind(this)
     this.handleRefreshClick = this.handleRefreshClick.bind(this) 
-    this.handleFetchClick = this.handleFetchClick.bind(this) 
+    this.handleTestClick = this.handleTestClick.bind(this) 
     this.refreshQueuedIds = this.refreshQueuedIds.bind(this) 
   }
 
@@ -148,13 +183,20 @@ class LyddyStream extends Component {
     fetchPosts(selectedStream, userIds)
   }
 
-  handleFetchClick(e) {
-    console.log("LyddyStream.handleFetchClick()...")
+  handleTestClick(e) {
+    console.log("LyddyStream.handleTestClick()...")
     e.preventDefault()
     console.log(this.props) 
     const { fetchPosts, selectedStream, user } = this.props
-    let userIds = this.getStreamUserIds(selectedStream, user)
-    fetchPosts(selectedStream, userIds)
+    // followUser('F7G80ZQ0QffjiWtHT51tU8ztHRq1')
+    // getFollowers(user.uid)
+    // acceptFollower('XWKhkvgF6bS5Knkg8cWT1YrJOFq1')
+    // .then(snap=>console.log(snap.val())) 
+    const mockFolRequests = {"XWKhkvgF6bS5Knkg8cWT1YrJOFq1":{"date_added":"2018-10-07T01:31:41-07:00"},"asdfasdgasfg":{"date_added":"gfsd"}}
+    const userIds = Object.keys(mockFolRequests)
+    // acceptFollower(userIds[0])
+    // removePendingRequest('F7G80ZQ0QffjiWtHT51tU8ztHRq1')
+
   }
 
   handleRefreshClick(e) {
@@ -187,7 +229,7 @@ class LyddyStream extends Component {
         <Picker
                 value={user.idToAlias[selectedStream] || ''}
                 onChange={this.handleChange}
-                options={['','nielvas/following', 'accounts', 'errored'].concat(aliasNames)}
+                options={['', 'danvas/followers','nielvas/followers', 'accounts', 'errored'].concat(aliasNames)}
               />
         }
         <p>
@@ -201,7 +243,7 @@ class LyddyStream extends Component {
               Refresh
             </a>}
         </p>
-        {false && <p><a href="#" onClick={this.handleFetchClick}>Test!</a></p>}
+        {false && <p><a href="#" onClick={this.handleTestClick}>Test!</a></p>}
         {renderPostButton && !hasError && user.loggedIn && <button onClick={this.toggleModal}>{this.state.postModalIsOpen? "cancel" : "New track"}</button>}
         {renderPostButton && <PostLydModal show={this.state.postModalIsOpen} onClose={this.toggleModal}></PostLydModal>}
         {(user.pendRequests.length > 0) && queuedIds.length === 0 && <h2>Loading...</h2>}
@@ -226,6 +268,7 @@ LyddyStream.propTypes = {
 }
 
 function mapStateToProps(state) {
+  console.log(state)
   const { selectedStream, postsByStream, user, player } = state
   const {
     isFetching,

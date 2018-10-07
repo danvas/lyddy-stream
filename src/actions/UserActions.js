@@ -7,6 +7,9 @@ export const RECEIVE_USER_STREAM = 'RECEIVE_USER_STREAM'
 export const USER_REQUEST_ERROR = 'USER_REQUEST_ERROR'
 export const UPDATE_ALIAS_MAPS = 'UPDATE_ALIAS_MAPS'
 
+var moment = require('moment');
+
+
 export function isLoggedIn() {
     // console.log(auth.currentUser? auth.currentUser.uid : auth.currentUser)
     return !!auth.currentUser
@@ -146,7 +149,7 @@ export function fetchUserData(userId) {
             const userVal = snap.val()
             if (userVal === null) {
                 const message = `LyddyError: Could not find user ${userId}`
-                const error = {code: 'USER_NOT_FOUND', param: userId, message}
+                const error = {code: 'USERID_NOT_FOUND', param: userId, message}
                 dispatch(handleRequestError(error))  
             } else {
                 const {playlists, ...userData} = userVal
@@ -201,4 +204,5 @@ export function getUserIdFromAlias(aliasName) {
         })
     }
 }
+
 
