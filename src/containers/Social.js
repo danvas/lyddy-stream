@@ -2,7 +2,7 @@ import React, { Component } from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import _ from 'lodash'
-import { getUserIdFromAlias, handleRequestError, isLoggedIn, getUser, 
+import { getUserIdFromAlias, handleRequestError, isLoggedIn, getAuthUser, 
   getUserDataFromAlias, fetchUserData, logOut } from '../actions/UserActions'
 import { fetchFollowersIfNeeded, followUser, unfollowUser, getSocialNetwork, acceptFollower, removePendingRequest  } from '../actions/SocialActions'
 
@@ -39,16 +39,22 @@ class Social extends Component {
   static getDerivedStateFromProps(nextProps, prevState){
     console.log("Social.getDerivedStateFromProps()...", nextProps)
     const { user, social, getSocialNetwork, followers, history, match, getUserDataFromAlias } = nextProps;
-    
+    let newState = null
 
     const userAlias = match.params['user_alias']
+    const net = match.params['social']
     const userId = user.aliasToId[userAlias]
     console.log(userId, social.isFetching)
     if (social.items.length === 0 && userId && !social.isFetching && !(social.error)) {
       console.log("GET SOCIAL NETWORK!!")
-      getSocialNetwork(userId, "following")
+      getSocialNetwork(userId, net)
     }
-    return null
+    if (user.error.code === 'USERID_NOT_FOUND') {
+      const erroredUsers = prevState.erroredUsers || []
+      newState = {erroredUsers: [...erroredUsers, user.error.param]}
+    }
+
+    return newState
   }
 
   handleTestClick(e) {
@@ -66,15 +72,27 @@ class Social extends Component {
 
   }
   render() {
-    const { user, social } = this.props
-    console.log("Social.RENDER()...", this.props)
+    const { user, social, match } = this.props
+    console.log("Social.RENDER()...", this.props, this.state)
     // console.log(this.state)
-    const noUser = (user.error.code === "USERID_NOT_FOUND")
+    const noUser = this.state.erroredUsers && this.state.erroredUsers.includes(match.params.user_alias)
+    let items = []
+    for (var item in social.items) {
+      items.push({user_id: item, ...social.items[item]})
+    }
+
+    let following = []
+    for (var item in user.following) {
+      following.push({user_id: item, ...user.following[item]})
+    }
+    // console.log(social.items)
+    // console.log(items)
+    // console.log(following)
     return (
       <div>
         <div>USER: {user.uid}</div>
         <p><a href="#" onClick={this.handleTestClick}>Test!</a></p>
-        {!noUser && <SocialList isFollowing={false} authUserId={user.uid} idToAlias={user.idToAlias} following={social.items} items={social.items} currentId={0} />}
+        {!noUser && <SocialList isFollowing={false} authUserId={user.uid} idToAlias={user.idToAlias} following={following} items={items} currentId={0} />}
         {noUser && <div><h2>Sorry, this page isn't available.</h2><p>The link you followed may be broken, or the page may have been removed. Go back to <a href='/'>homepage</a>.</p></div>}
       </div>
     )
@@ -91,7 +109,7 @@ const mapDispatchToProps = dispatch => ({
   getUserData: userId => dispatch(fetchUserData(userId)),
   getUserDataFromAlias: aliasName => dispatch(getUserDataFromAlias(aliasName)),
   getUserIdFromAlias: aliasName => dispatch(getUserIdFromAlias(aliasName)),
-  getUserCred: () => dispatch(getUser()),
+  getUserCred: () => dispatch(getAuthUser()),
 })
 
 export default connect(mapStateToProps, mapDispatchToProps)(Social)

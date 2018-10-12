@@ -1,8 +1,11 @@
 import { auth, usersDatabase, database }  from '../Firebase';
-import { handleFetchError } from '../actions'
+import { getSocialNetworkPromise } from '../actions/SocialActions'
 export const GET_USER = 'GET_USER';
 export const REQUEST_USER_DATA = 'REQUEST_USER_DATA'
+export const RECEIVE_USER_AUTH = 'RECEIVE_USER_AUTH';
 export const RECEIVE_USER_DATA = 'RECEIVE_USER_DATA'
+export const RECEIVE_USER_FOLLOWING = 'RECEIVE_USER_FOLLOWING'
+export const RECEIVE_ALIAS_MAPS = 'RECEIVE_ALIAS_MAPS'
 export const RECEIVE_USER_STREAM = 'RECEIVE_USER_STREAM'
 export const USER_REQUEST_ERROR = 'USER_REQUEST_ERROR'
 export const UPDATE_ALIAS_MAPS = 'UPDATE_ALIAS_MAPS'
@@ -24,7 +27,21 @@ export function handleRequestError(error) {
   }
 }
 
-export function getUser() {
+export function receiveFollowing(following) {
+    return {
+        type: RECEIVE_USER_FOLLOWING, 
+        following
+    } 
+}
+
+export function receiveAuthData(user) {
+    return {
+        type: RECEIVE_USER_AUTH, 
+        payload: user
+    }
+}
+
+export function getAuthUser() {
     // console.log("getUser!")
     return dispatch => {
         // console.log(auth.currentUser)
@@ -32,16 +49,73 @@ export function getUser() {
         auth.onAuthStateChanged(
             user => {
                 if (user) {
-                    dispatch({type: GET_USER, payload: user})
-                    dispatch(fetchUserData(user.uid))
+                    dispatch(receiveAuthData(user))
+                    let aliasToId = {}
+                    aliasToId[user.displayName] = user.uid
+                    console.log(aliasToId)
+                    dispatch(updateAliasMaps(aliasToId))
+                    dispatch(setupAuthUser())
                 } else {
                     const message = "LyddyError: User not authenticated"
                     const error = {code: 'USER_UNAUTHENTICATED', param: null, message}
                     dispatch(handleRequestError(error))
                 }
             },
-            error => {console.log(error)}
+            error => {console.log(error)},
+            () => {console.log("DECONSTRUCT AUTH SETUP HERE!!")}
         )
+    }
+}
+
+export function setupAuthUser() {
+    const userId = auth.currentUser && auth.currentUser.uid
+    const userRef = usersDatabase.child(userId);
+    return dispatch => {
+        dispatch(requestUserData('setupAuthUser'))
+        userRef.once('value').then(
+            snap => {
+                const userVal = snap.val()
+                if (userVal === null) {
+                    const message = `LyddyError: Could not find user ${userId}`
+                    const error = {code: 'USERID_NOT_FOUND', param: userId, message}
+                    dispatch(handleRequestError(error))  
+                } else {
+                    const {playlists, ...userData} = userVal
+                    dispatch(receiveUserData(userId, userData, true))
+                }
+            },
+            error => {
+                dispatch(handleRequestError(error))
+            }
+        )
+        .then(() => {
+            dispatch(getFollowing(userId))
+        })
+    }
+}
+
+export function getFollowing(userId) {
+    return dispatch => {
+      dispatch(requestUserData('getFollowing'))
+      getSocialNetworkPromise(userId, "following")
+      .then(members => {
+        dispatch(receiveFollowing(members))
+        return members
+      })
+      .then(members => {
+        var aliasName
+        let aliasToId = {}
+        for (var userId in members) {
+            aliasName = members[userId]['user_alias']
+            aliasToId[aliasName] = userId
+        }
+        dispatch(updateAliasMaps(aliasToId))
+      })
+      .catch(err => {
+        console.log(err.message)
+        const error = {code: 'SOCIAL_EMPTY', param: `${userId}/following`, message: err.message}
+        dispatch(handleRequestError(error))
+      })
     }
 }
 
@@ -51,25 +125,26 @@ function requestUserData(item) {
     item  
   }
 }
-function receiveUserData(userId, userData) {
+
+function receiveUserData(userId, userData, isAuthUser=false) {
   return {
     type: RECEIVE_USER_DATA,
     userId,
     userData,
-  }
-}
-function receiveUserPlaylists(userId, streams) {
-  return {
-    type: RECEIVE_USER_STREAM,
-    userId,
-    streams
+    isAuthUser
   }
 }
 
 function updateAliasMaps(aliasToId) {
   return {
     type: UPDATE_ALIAS_MAPS,
-    aliasToId,
+    aliasToId
+  }   
+}
+function receiveAliasMaps(aliasToId) {
+  return {
+    type: RECEIVE_ALIAS_MAPS,
+    aliasToId
   }   
 }
 
@@ -82,7 +157,7 @@ export function logOut() {
         dispatch(requestUserData('signout'))
         auth.signOut()
         .then(snap => {
-            dispatch({type: GET_USER, payload: snap})
+            dispatch(receiveAuthData(snap))
         })
     }
 }
@@ -113,10 +188,20 @@ export function setUser(userId) {
 
 
 export function getAliasFromProfiles(userIds) {
-    const firstId = userIds[0]
-    const lastId = firstId//userIds[userIds.length - 1]
-    // console.log(userIds, firstId, lastId)
-    const aliasNamesRef = usersDatabase.orderByKey().startAt(firstId)//.endAt(lastId)
+    var aliasNamesRef
+    if (userIds.length === 0) {
+        console.warn("userIds list empty:", userIds)
+        return dispatch => {null}
+    } else if (userIds.length === 1) {
+        aliasNamesRef = usersDatabase.child(userIds[0])
+    } else {
+        userIds.sort()
+        const firstId = userIds[0]
+        const lastId = userIds[userIds.length - 1]
+        // console.log(userIds, firstId, lastId)
+        aliasNamesRef = usersDatabase.orderByKey().startAt(firstId).endAt(lastId)
+    }
+
     return dispatch => {    
         dispatch(requestUserData('getAliasFromProfiles'))
         aliasNamesRef.once('value')
@@ -129,7 +214,7 @@ export function getAliasFromProfiles(userIds) {
                     aliasName = profiles[userId]['alias_name']
                     aliasToId[aliasName] = userId
                 }
-                dispatch(updateAliasMaps(aliasToId))
+                dispatch(receiveAliasMaps(aliasToId))
             } else {
                 const message = `LyddyError: Could not find alias names for ${userIds}`
                 const error = {code: 'ALIAS_NOT_FOUND', param: userIds, message}
@@ -154,9 +239,12 @@ export function fetchUserData(userId) {
             } else {
                 const {playlists, ...userData} = userVal
                 var userIds = [userId]
-                var userIds = userIds.concat(Object.keys(userData['follows']))
-                dispatch(getAliasFromProfiles(userIds.sort()))
-                dispatch(receiveUserData(userId, userData))
+                let aliasToId = {}
+                aliasToId[userData['alias_name']] = snap.key
+                console.log(aliasToId)
+                dispatch(updateAliasMaps(aliasToId))
+                // dispatch(getAliasFromProfiles(userIds.sort()))
+                dispatch(receiveUserData(userId, userData, userId === auth.currentUser.uid))
             }
         },
         error => {
@@ -199,7 +287,7 @@ export function getUserIdFromAlias(aliasName) {
             } else {
                 let aliasToId = {}
                 aliasToId[aliasName] = userId
-                dispatch(updateAliasMaps(aliasToId))
+                dispatch(receiveAliasMaps(aliasToId))
             }
         })
     }

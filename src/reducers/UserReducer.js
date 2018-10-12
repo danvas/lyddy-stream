@@ -1,10 +1,13 @@
 
 import { 
     REQUEST_USER_DATA,
+    RECEIVE_USER_AUTH,
+    RECEIVE_ALIAS_MAPS,
     UPDATE_ALIAS_MAPS,
     USER_REQUEST_ERROR,
     GET_USER, 
     RECEIVE_USER_DATA,
+    RECEIVE_USER_FOLLOWING,
     RECEIVE_USER_STREAM
 } from '../actions/UserActions';
 
@@ -12,22 +15,35 @@ const defState = {pendRequests: [], numRequest: 0, numReceive: 0,
     isLoading: true, loggedIn: false, profiles: {}, streams: {},
     aliasToId: {}, idToAlias: {}, error: {}}
 
+const getRequestStatus = (action, pendingRequests) => {
+    var pendRequests
+    const incrPendingRequests = action.type.includes('REQUEST_USER')
+    const decrPendingRequests = action.type.includes('RECEIVE_')
+    const resetPendingRequests = action.type.includes('REQUEST_ERROR')
+    if (incrPendingRequests) {
+        pendRequests = [...pendingRequests, action.item]
+    } else if (decrPendingRequests) {
+        pendRequests = pendingRequests.slice(0, pendingRequests.length - 1) 
+    } else if (resetPendingRequests) {
+        pendRequests = []
+    } else {
+        pendRequests = [...pendingRequests]
+    }
+    const isLoading = pendRequests.length > 0
+    
+    return {pendRequests, isLoading}
+}
+
 export default function(state=defState, action) {
     // console.log(action.userData)
     // console.log(state, action.payload)
-    var pendRequests
-    if (action.type === REQUEST_USER_DATA) {
-        pendRequests = [...state.pendRequests, action.item]
-    } else {
-        pendRequests = state.pendRequests.slice(0, state.pendRequests.length - 1) 
-    }
-
+    const { pendRequests, isLoading } = getRequestStatus(action, state.pendRequests)
+    // console.log(pendRequests, isLoading)
     switch (action.type) {
         case REQUEST_USER_DATA:
             return {...state, error: {}, pendRequests, numRequest: state.numRequest + 1, isLoading: true}
-
+        case RECEIVE_ALIAS_MAPS:
         case UPDATE_ALIAS_MAPS:
-            
             var aliasToId = {...state.aliasToId}
             var idToAlias = {...state.idToAlias}
             var userId
@@ -49,7 +65,7 @@ export default function(state=defState, action) {
             // errorsLog[action.receivedAt] = error
             return {...state, error, pendRequests, isLoading: false}
 
-        case GET_USER:
+        case RECEIVE_USER_AUTH:
             var loggedIn = false
             let currentUser = {}
             var payload = {}
@@ -63,11 +79,19 @@ export default function(state=defState, action) {
             } else {
                 return {...defState, isLoading: false, pendRequests}
             }
-            
+
+        case RECEIVE_USER_FOLLOWING:
+            return {...state, following: {...action.following}, isLoading, pendRequests}
+
         case RECEIVE_USER_DATA:
+            let newState = {...state, error: {}, isLoading: false, numReceive: state.numReceive + 1, pendRequests}
+            if (action.isAuthUser) {
+                newState = {...newState, ...action.userData}
+            } 
             var profiles = {...state.profiles}
             profiles[action.userId] = {...action.userData}
-            return {...state, error: {}, isLoading: false, numReceive: state.numReceive + 1, pendRequests, profiles}
+            newState = {...newState, profiles}
+            return newState
 
         case RECEIVE_USER_STREAM:
             var streams = {...state.streams}

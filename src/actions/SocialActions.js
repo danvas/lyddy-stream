@@ -12,7 +12,7 @@ function getSortedPosts(followers) {
   return sortedValues
 }
 
-export function requestSocialMembers(requested) {
+export function requestSocialNetwork(requested) {
   return {
     type: REQUEST_SOCIALNETWORK,
     requested
@@ -22,9 +22,8 @@ export function requestSocialMembers(requested) {
 export function handleFetchError(stream, error) {
   return {
     type: HANDLE_SOCIAL_ERROR,
-    stream,
-    followers: [],
     receivedAt: Date.now(),
+    stream,
     error
   }
 }
@@ -33,7 +32,7 @@ function filterFollowers(isPublic, followers) {
   return followers.filter(follower => (isPublic === follower.public))
 }
 
-export function receiveSocialMembers(userId, items) {
+export function receiveSocialNetwork(userId, items) {
   return {
     type: RECEIVE_SOCIALNETWORK,
     userId,
@@ -74,52 +73,64 @@ export function followUser(userId) {
     })
 }
 
-
-
-export function getSocialNetwork(userId, net) {
-    const reqRef = database.child(`user_network/${userId}/${net}`)
-    return (dispatch, getState) => {
-      console.log(getState())
-      dispatch(requestSocialMembers(`${userId}/${net}`))
-      reqRef.once('value')
-      .then(snap => {
-        const members = snap.val()
+export function getSocialNetworkPromise(userId, net, mergeProfileData=true) {
+  return new Promise((resolve, reject) => {
+    database.child(`user_network/${userId}/${net}`)
+    .once('value').then(snap => {
+      const members = snap.val()
+      console.log(members)
+      if (members === null){
+        reject(new Error(`LyddyError: '${net}' data not found.`))
+      } else {
         console.log(members)
-        if (members === null){
-          throw Error(`LyddyError: '${net}' list is empty.`)
-        } else {
-          return members
-        }
-      })
-      .then(members => {
+        resolve(members)
+      }
+    })
+    .catch(dbError => {
+      reject(new Error(dbError.message))
+    })
+
+  }).then(members => {
+    if (!mergeProfileData) {
+      return members
+    } else {
+      return new Promise((resolve, reject) => {
         let memberIds = Object.keys(members)
-        // console.log(memberIds)
         memberIds.sort()
-        // console.log(memberIds)
         const firstId = memberIds[0]
         const lastId = memberIds[memberIds.length - 1]
         usersDatabase.orderByKey().startAt(firstId).endAt(lastId)
         .once('value').then(snap => {
+          let items = {}
           var item
-          let items = []
-          // console.log(snap.val())
           snap.forEach(userSnap => {
             const user = userSnap.val()
-            // console.log(userSnap.key, user['alias_name'])
-            // console.log(memberIds.includes(userSnap.key))
-            if (memberIds.includes(userSnap.key)) {
-              item = {...members[userSnap.key],
-                user_id: userSnap.key,
+            const member = members[userSnap.key] || null
+            if (member !== null) {
+              item = {...member,
                 user_alias: user['alias_name'],
                 user_image: user['alias_image'],
               }
-              // console.log(item)
-              items.push(item)
+              items[userSnap.key] = item
             }
           })
-          console.log(items)
-          dispatch(receiveSocialMembers(userId, items))
+          resolve(items)
         })
+        .catch(dbError => {
+          reject(new Error(dbError.message))
+        })
+      })
+    }
+  })
+}
+
+export function getSocialNetwork(userId, net) {
+    return dispatch => {
+      dispatch(requestSocialNetwork(`${userId}/${net}`))
+      getSocialNetworkPromise(userId, net)
+      .then(items => {
+        console.log(items)
+        dispatch(receiveSocialNetwork(userId, items))
       })
       .catch(err => {
         console.log(err.message)
@@ -127,7 +138,6 @@ export function getSocialNetwork(userId, net) {
         dispatch(handleFetchError(userId, error))
       })
     }
-
 }
 
 export function acceptFollower(userId) {

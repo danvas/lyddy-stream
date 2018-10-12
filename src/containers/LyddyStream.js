@@ -7,7 +7,7 @@ import {
   fetchPostsIfNeeded,
   invalidateStream
 } from '../actions'
-import { getUserIdFromAlias, handleRequestError, isLoggedIn, getUser, 
+import { getUserIdFromAlias, handleRequestError, isLoggedIn, getAuthUser, 
   getUserDataFromAlias, fetchUserData, logOut } from '../actions/UserActions'
 import { updateQueue } from '../actions/PlayerActions'
 import Picker from '../components/Picker'
@@ -84,20 +84,19 @@ class LyddyStream extends Component {
 
 
   getStreamUserIds(streamKey, user) {
-    // console.log("getStreamUserIds: ", `'${streamKey}'`, profiles, authUserId)
+    // console.log("getStreamUserIds: ", `'${streamKey}'`, user)
     let userIds = []
-    const profiles = user.profiles
     let userId = streamKey || user.uid
-    if (!userId || Object.keys(profiles).length === 0 || !profiles[userId]) {
+    if (!userId || !user.following) {
       return userIds
     }
 
     userIds = [userId]
-    const follows = profiles[userId]['follows'] || {}
-    if (streamKey === '') {
-      userIds = userIds.concat(Object.keys(follows))
+    if (streamKey === '' && user.following) {
+      const following = user.following
+      userIds = userIds.concat(Object.keys(following))
     }
-
+    console.log(userIds)
     return userIds
   }
 
@@ -298,7 +297,7 @@ const mapDispatchToProps = dispatch => ({
   getUserDataFromAlias: aliasName => dispatch(getUserDataFromAlias(aliasName)),
   getUserIdFromAlias: aliasName => dispatch(getUserIdFromAlias(aliasName)),
   userRequestError: error => dispatch(handleRequestError(error)),
-  getUserCred: () => dispatch(getUser()),
+  getUserCred: () => dispatch(getAuthUser()),
   logOut: () => dispatch(logOut()),
 })
 

@@ -3,7 +3,7 @@ import SimpleBox from '../components/SimpleBox';
 import InputField from '../components/InputField';
 import FooterFormButton from '../components/FooterFormButton';
 import ErrorAlert from '../components/ErrorAlert'
-import { login, getUser, fetchUserData } from '../actions/UserActions';
+import { login, getAuthUser, fetchUserData } from '../actions/UserActions';
 import { selectStream } from '../actions'
 import { connect } from 'react-redux';
 
@@ -38,7 +38,7 @@ class Login extends Component {
         login(this.state.email, this.state.password)
         .then(userCred => {
             const streamKey = userCred.user.uid
-            getUserData(streamKey)
+            // getUserData(streamKey)
             selectStream("")
         })
         .catch(err => {
@@ -52,7 +52,7 @@ class Login extends Component {
         // console.log("Login.componentDIDUpdate...")
         const { getUserData, selectStream, user } = this.props
         if (user.uid) {
-            getUserData(user.uid)
+            // getUserData(user.uid)
             selectStream("")            
         }
     }
@@ -101,7 +101,7 @@ function mapStateToProps(state) {
 const mapDispatchToProps = dispatch => ({
     login: (username, password) => dispatch(login(username, password)),      
     getUserData: userId => dispatch(fetchUserData(userId)),
-    getUserCred: () => dispatch(getUser()),
+    getUserCred: () => dispatch(getAuthUser()),
     selectStream: (key) => dispatch(selectStream(key))
 })
 
