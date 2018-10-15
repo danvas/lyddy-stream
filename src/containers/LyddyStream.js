@@ -82,24 +82,6 @@ class LyddyStream extends Component {
     }
   }
 
-
-  getStreamUserIds(streamKey, user) {
-    // console.log("getStreamUserIds: ", `'${streamKey}'`, user)
-    let userIds = []
-    let userId = streamKey || user.uid
-    if (!userId || !user.following) {
-      return userIds
-    }
-
-    userIds = [userId]
-    if (streamKey === '' && user.following) {
-      const following = user.following
-      userIds = userIds.concat(Object.keys(following))
-    }
-    console.log(userIds)
-    return userIds
-  }
-
   // static getDerivedStateFromProps(nextProps, prevState){
   //   console.log("LyddyStream.getDerivedStateFromProps()...", nextProps)
   //   const { user, userRequestError, history, match, getUserDataFromAlias, getUserCred, selectStream } = nextProps;
@@ -119,7 +101,7 @@ class LyddyStream extends Component {
     }
     if (user.error.code) {
       if (user.error.code === 'USER_UNAUTHENTICATED') {
-        history.replace('/login')
+        // history.replace('/login')
       }
       return
     }
@@ -138,8 +120,7 @@ class LyddyStream extends Component {
       selectStream(streamKey)
     }
 
-    const userIds = this.getStreamUserIds(streamKey, user)
-    fetchPosts(streamKey, userIds)
+    fetchPosts(streamKey)
     this.refreshQueuedIds(posts, player.queuedIds)
   }
 
@@ -246,7 +227,7 @@ class LyddyStream extends Component {
         {renderPostButton && !hasError && user.loggedIn && <button onClick={this.toggleModal}>{this.state.postModalIsOpen? "cancel" : "New track"}</button>}
         {renderPostButton && <PostLydModal show={this.state.postModalIsOpen} onClose={this.toggleModal}></PostLydModal>}
         {(user.pendRequests.length > 0) && queuedIds.length === 0 && <h2>Loading...</h2>}
-        {(!hasError && !(user.pendRequests.length > 0) && queuedIds.length === 0 && user.loggedIn) && <h2>Empty.</h2>}
+        {(false && !hasError && !(user.pendRequests.length > 0) && queuedIds.length === 0 && user.loggedIn) && <h2>Empty.</h2>}
         {!hasError && isPrivate && <div><h2>This account is private.</h2><p>Already follow {user.idToAlias[selectedStream]}? <a href='/login'>Sign in</a> to see their posts.</p></div>}
         {hasError && <div><h2>Sorry, this page isn't available.</h2><p>The link you followed may be broken, or the page may have been removed. Go back to <a href='/'>homepage</a>.</p></div>}
         {!hasError &&
@@ -289,7 +270,7 @@ function mapStateToProps(state) {
 }
 
 const mapDispatchToProps = dispatch => ({
-  fetchPosts: (stream, userIds) => dispatch(fetchPostsIfNeeded(stream, userIds)),
+  fetchPosts: (stream) => dispatch(fetchPostsIfNeeded(stream)),
   selectStream: (stream) => dispatch(selectStream(stream)),
   invalidateStream: stream => dispatch(invalidateStream(stream)),
   updateQueue: posts => dispatch(updateQueue(posts)),

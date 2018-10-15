@@ -4,6 +4,7 @@ export const GET_USER = 'GET_USER';
 export const REQUEST_USER_DATA = 'REQUEST_USER_DATA'
 export const RECEIVE_USER_AUTH = 'RECEIVE_USER_AUTH';
 export const RECEIVE_USER_DATA = 'RECEIVE_USER_DATA'
+export const UPDATE_USER_FOLLOWING = 'UPDATE_USER_FOLLOWING'
 export const RECEIVE_USER_FOLLOWING = 'RECEIVE_USER_FOLLOWING'
 export const RECEIVE_ALIAS_MAPS = 'RECEIVE_ALIAS_MAPS'
 export const RECEIVE_USER_STREAM = 'RECEIVE_USER_STREAM'
@@ -27,7 +28,13 @@ export function handleRequestError(error) {
   }
 }
 
-export function receiveFollowing(following) {
+function updateAuthFollowing(following) {
+    return {
+        type: UPDATE_USER_FOLLOWING, 
+        following
+    } 
+}
+export function receiveAuthFollowing(following) {
     return {
         type: RECEIVE_USER_FOLLOWING, 
         following
@@ -41,6 +48,28 @@ export function receiveAuthData(user) {
     }
 }
 
+function removeFollowing(user, following) {
+    const retFollowing = {...following}
+    delete retFollowing[user.user_id]
+    return retFollowing
+}
+
+function addFollowing(user, following) {
+    const retFollowing = {...following}
+    retFollowing[user.user_id] = user
+    return retFollowing
+}
+
+export function updateFollowing(user, following, doFollow) {
+    var modFollowing
+    if (doFollow) {
+        modFollowing = addFollowing(user, following)
+    } else {
+        modFollowing = removeFollowing(user, following)
+    }
+    return dispatch => dispatch(updateAuthFollowing(modFollowing))
+
+}
 export function getAuthUser() {
     // console.log("getUser!")
     return dispatch => {
@@ -82,15 +111,13 @@ export function setupAuthUser() {
                 } else {
                     const {playlists, ...userData} = userVal
                     dispatch(receiveUserData(userId, userData, true))
+                    dispatch(getFollowing(userId))
                 }
             },
             error => {
                 dispatch(handleRequestError(error))
             }
         )
-        .then(() => {
-            dispatch(getFollowing(userId))
-        })
     }
 }
 
@@ -99,14 +126,14 @@ export function getFollowing(userId) {
       dispatch(requestUserData('getFollowing'))
       getSocialNetworkPromise(userId, "following")
       .then(members => {
-        dispatch(receiveFollowing(members))
+        dispatch(receiveAuthFollowing(members))
         return members
       })
       .then(members => {
         var aliasName
         let aliasToId = {}
         for (var userId in members) {
-            aliasName = members[userId]['user_alias']
+            aliasName = members[userId]['alias_name']
             aliasToId[aliasName] = userId
         }
         dispatch(updateAliasMaps(aliasToId))
@@ -244,7 +271,8 @@ export function fetchUserData(userId) {
                 console.log(aliasToId)
                 dispatch(updateAliasMaps(aliasToId))
                 // dispatch(getAliasFromProfiles(userIds.sort()))
-                dispatch(receiveUserData(userId, userData, userId === auth.currentUser.uid))
+                const isAuthUser = auth.currentUser && (userId === auth.currentUser.uid)
+                dispatch(receiveUserData(userId, userData, isAuthUser))
             }
         },
         error => {

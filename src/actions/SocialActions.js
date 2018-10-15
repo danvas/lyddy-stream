@@ -1,8 +1,10 @@
 import { auth, usersDatabase, lyddiesDatabase, postsDatabase, database } from '../Firebase';
 import { updateQueue } from './PlayerActions'
+import _ from 'lodash'
 export const REQUEST_SOCIALNETWORK = 'REQUEST_SOCIALNETWORK'
 export const RECEIVE_SOCIALNETWORK = 'RECEIVE_SOCIALNETWORK'
 export const HANDLE_SOCIAL_ERROR = 'HANDLE_SOCIAL_ERROR'
+export const SOCIAL_TOGGLE_FOLLOW = 'SOCIAL_TOGGLE_FOLLOW'
 var moment = require('moment')
 
 function getSortedPosts(followers) {
@@ -41,19 +43,26 @@ export function receiveSocialNetwork(userId, items) {
   }
 }
 
-
-
-export function unfollowUser(userId) { //WIP
+export function unfollowUser(userId) {
     const authUserId = auth.currentUser && auth.currentUser.uid
-    const followRef = database.child(`user_network/${userId}/followers/${authUserId}`)
-    // let val = {'date_added': moment().format(), 'status': 1}
-    // followRef.set(val, ()=>console.log("followUser done!!!", userId))
-    // .then(something=>console.log("something in then!", something))
-    // .catch(err=>{
-    //         console.log(err.code === "PERMISSION_DENIED", "pending request!...")
-    //         val['status'] = 0
-    //         followRef.set(val)
-    // })
+    const followersRef = database.child(`user_network/${userId}/followers/${authUserId}`)
+    const followingRef = database.child(`user_network/${authUserId}/following/${userId}`)
+    let val = null
+    return followersRef.set(val)
+    .then(() => {
+      return followingRef.set(val)
+    })
+    .catch(err=>{
+      console.log(err.code === "PERMISSION_DENIED", "pending request!...")
+      return Error(err.message)
+    })
+}
+
+export function doUnfollowUser(userId) {
+  return dispatch => {
+    dispatch(requestSocialNetwork('doFollowUser'))
+    unfollowUser(userId)
+  }
 }
 
 export function followUser(userId) {
@@ -61,66 +70,94 @@ export function followUser(userId) {
     const followersRef = database.child(`user_network/${userId}/followers/${authUserId}`)
     const followingRef = database.child(`user_network/${authUserId}/following/${userId}`)
     let val = {'date_added': moment().format(), 'status': 1}
-    followersRef.set(val)
+    return followersRef.set(val)
     .then(() => {
-      followingRef.set(val)
+      return followingRef.set(val)
     })
     .catch(err=>{
       console.log(err.code === "PERMISSION_DENIED", "pending request!...")
       val['status'] = 0
       followersRef.set(val)
-      followingRef.set(val)
+      .then(() => {
+        return followingRef.set(val)
+      })
+      .catch((err) => { return Error(err.message)})
     })
 }
 
-export function getSocialNetworkPromise(userId, net, mergeProfileData=true) {
+export function toggleFollowUser(userId, doFollow) {
+  return dispatch => {
+    dispatch(requestSocialNetwork(`toggleFollowUser('${userId}',${doFollow})`))
+    var toggledFollow 
+    if (doFollow) {
+      toggledFollow = followUser(userId)  
+    } else {
+      toggledFollow = unfollowUser(userId)
+    }
+
+    toggledFollow
+    .then(() => {
+      dispatch({type: SOCIAL_TOGGLE_FOLLOW, userId, toggledFollow: doFollow, success: true})
+    }).catch(err => {
+      dispatch({type: SOCIAL_TOGGLE_FOLLOW, userId, success: false})
+    })
+  }
+}
+
+export function getSocialNetworkPromise(userId, net, 
+  filterByStatus=1, mergeProfileData=true) {
   return new Promise((resolve, reject) => {
     database.child(`user_network/${userId}/${net}`)
     .once('value').then(snap => {
-      const members = snap.val()
+      let members = snap.val() || {}
       console.log(members)
-      if (members === null){
-        reject(new Error(`LyddyError: '${net}' data not found.`))
-      } else {
-        console.log(members)
-        resolve(members)
+      if (filterByStatus !== undefined) {
+        members = _.pickBy(members, 
+          (value, key) => filterByStatus === value.status)
       }
+      resolve(members)
     })
     .catch(dbError => {
       reject(new Error(dbError.message))
     })
 
   }).then(members => {
-    if (!mergeProfileData) {
-      return members
+    if (mergeProfileData) {
+      return mergeProfileDataPromise(members)
     } else {
-      return new Promise((resolve, reject) => {
-        let memberIds = Object.keys(members)
-        memberIds.sort()
-        const firstId = memberIds[0]
-        const lastId = memberIds[memberIds.length - 1]
-        usersDatabase.orderByKey().startAt(firstId).endAt(lastId)
-        .once('value').then(snap => {
-          let items = {}
-          var item
-          snap.forEach(userSnap => {
-            const user = userSnap.val()
-            const member = members[userSnap.key] || null
-            if (member !== null) {
-              item = {...member,
-                user_alias: user['alias_name'],
-                user_image: user['alias_image'],
-              }
-              items[userSnap.key] = item
-            }
-          })
-          resolve(items)
-        })
-        .catch(dbError => {
-          reject(new Error(dbError.message))
-        })
-      })
+      return members
     }
+  })
+}
+
+export function mergeProfileDataPromise(users) {
+  return new Promise((resolve, reject) => {
+    let userIds = Object.keys(users)
+    if (userIds.length === 0) {
+      resolve(users)
+    }
+    userIds.sort()
+    const firstId = userIds[0]
+    const lastId = userIds[userIds.length - 1]
+    usersDatabase.orderByKey().startAt(firstId).endAt(lastId)
+    .once('value').then(snap => {
+      let items = {}
+      var item
+      snap.forEach(userSnap => {
+        const profile = userSnap.val()
+        const member = users[userSnap.key] || null
+        if (member !== null) {
+          item = {...member, ...profile,
+            user_id: userSnap.key
+          }
+          items[userSnap.key] = item
+        }
+      })
+      resolve(items)
+    })
+    .catch(dbError => {
+      reject(new Error(dbError.message))
+    })
   })
 }
 

@@ -8,12 +8,13 @@ import {
     GET_USER, 
     RECEIVE_USER_DATA,
     RECEIVE_USER_FOLLOWING,
+    UPDATE_USER_FOLLOWING,
     RECEIVE_USER_STREAM
 } from '../actions/UserActions';
 
 const defState = {pendRequests: [], numRequest: 0, numReceive: 0,
     isLoading: true, loggedIn: false, profiles: {}, streams: {},
-    aliasToId: {}, idToAlias: {}, error: {}}
+    aliasToId: {}, idToAlias: {}, following: null, error: {}}
 
 const getRequestStatus = (action, pendingRequests) => {
     var pendRequests
@@ -41,7 +42,7 @@ export default function(state=defState, action) {
     // console.log(pendRequests, isLoading)
     switch (action.type) {
         case REQUEST_USER_DATA:
-            return {...state, error: {}, pendRequests, numRequest: state.numRequest + 1, isLoading: true}
+            return {...state, error: {}, pendRequests, numRequest: state.numRequest + 1, isLoading}
         case RECEIVE_ALIAS_MAPS:
         case UPDATE_ALIAS_MAPS:
             var aliasToId = {...state.aliasToId}
@@ -54,7 +55,7 @@ export default function(state=defState, action) {
             }
             // aliasToId[action.alias] = action.userId
             // idToAlias[action.userId] = action.alias
-            return {...state, error: {}, aliasToId, idToAlias, pendRequests}
+            return {...state, error: {}, aliasToId, idToAlias, pendRequests, isLoading}
 
         case USER_REQUEST_ERROR:
             let error = {...action.error}
@@ -63,7 +64,7 @@ export default function(state=defState, action) {
             }
             // var errorsLog = {...state.errorsLog}
             // errorsLog[action.receivedAt] = error
-            return {...state, error, pendRequests, isLoading: false}
+            return {...state, error, pendRequests, isLoading}
 
         case RECEIVE_USER_AUTH:
             var loggedIn = false
@@ -75,16 +76,17 @@ export default function(state=defState, action) {
                 payload = action.payload
                 loggedIn = true
                 props.forEach(prop => currentUser[prop] = payload[prop])
-                return {...state, error: {}, isLoading: false, ...currentUser, pendRequests, loggedIn}
+                return {...state, error: {}, isLoading, ...currentUser, pendRequests, loggedIn}
             } else {
-                return {...defState, isLoading: false, pendRequests}
+                return {...defState, isLoading, pendRequests}
             }
 
+        case UPDATE_USER_FOLLOWING:
         case RECEIVE_USER_FOLLOWING:
             return {...state, following: {...action.following}, isLoading, pendRequests}
 
         case RECEIVE_USER_DATA:
-            let newState = {...state, error: {}, isLoading: false, numReceive: state.numReceive + 1, pendRequests}
+            let newState = {...state, error: {}, isLoading, numReceive: state.numReceive + 1, pendRequests}
             if (action.isAuthUser) {
                 newState = {...newState, ...action.userData}
             } 
@@ -96,7 +98,7 @@ export default function(state=defState, action) {
         case RECEIVE_USER_STREAM:
             var streams = {...state.streams}
             streams[action.userId] = {...action.streams}
-            return {...state, error: {}, isLoading: false, streams}
+            return {...state, error: {}, isLoading, streams}
 
         default:
             return state;

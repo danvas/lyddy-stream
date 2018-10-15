@@ -2,9 +2,9 @@ import React, { Component } from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import _ from 'lodash'
-import { getUserIdFromAlias, handleRequestError, isLoggedIn, getAuthUser, 
-  getUserDataFromAlias, fetchUserData, logOut } from '../actions/UserActions'
-import { fetchFollowersIfNeeded, followUser, unfollowUser, getSocialNetwork, acceptFollower, removePendingRequest  } from '../actions/SocialActions'
+import { updateFollowing, getUserIdFromAlias, handleRequestError, isLoggedIn, getAuthUser, 
+  getUserDataFromAlias, fetchUserData, logOut, getFollowing } from '../actions/UserActions'
+import { toggleFollowUser, followUser, unfollowUser, getSocialNetwork, acceptFollower, removePendingRequest  } from '../actions/SocialActions'
 
 import { updateQueue } from '../actions/PlayerActions'
 import { SocialList } from '../containers/SocialList'
@@ -57,6 +57,13 @@ class Social extends Component {
     return newState
   }
 
+  componentDidUpdate(prevProps) {
+    console.log("Social.componentDidUPDATE()...")
+    // console.log(prevProps.user)
+    console.log(this.props)
+    const { social, user, getFollowing } = this.props
+  }
+
   handleTestClick(e) {
     console.log("Social.handleTestClick()...")
     e.preventDefault()
@@ -65,34 +72,60 @@ class Social extends Component {
     // followUser('F7G80ZQ0QffjiWtHT51tU8ztHRq1')
     // followUser('FAKE18j0iqfqffwhtqz10tgurz8t')
     // followUser('XWKhkvgF6bS5Knkg8cWT1YrJOFq1')
-    // acceptFollower('XWKhkvgF6bS5Knkg8cWT1YrJOFq1')
+    acceptFollower('XWKhkvgF6bS5Knkg8cWT1YrJOFq1')
     const { user_alias, social } = match.params
     const userId = user.aliasToId[user_alias]
-    getSocialNetwork(userId, social)
+    // getSocialNetwork(userId, social)
+    // getSocialNetwork(user.uid, "following")
 
   }
+  // TODO: MOVE THIS TO DISPATCH FUNCTION! 
+  // Then remove that logic in componentDidUpdate, so we're no re-rendering the entire list!
+  ingestedSocialItems = (authUser, socialItems) => {
+
+    let items = []
+    if (socialItems && authUser.following) {
+      var isFollowing
+      var socialItem
+      for (var itemUid in socialItems) {
+        socialItem = socialItems[itemUid]
+        console.log(authUser.uid, itemUid.user_id)
+        if (authUser.uid === itemUid) {
+          isFollowing = null
+        } else {
+          isFollowing = Object.keys(authUser.following).includes(itemUid)? 1 : 0
+        }
+        console.log({...socialItem, isFollowing})
+        items.push({...socialItem, isFollowing})
+      }
+    }
+    return items
+  }
+
+  toggleFollow = (user, event) => {
+    event.preventDefault()
+    let doFollow = user.isFollowing? false : true
+    this.props.toggleFollowAction(user.user_id, doFollow)
+    this.props.updateFollowing(user, this.props.user.following, doFollow)
+  }
+
+
   render() {
     const { user, social, match } = this.props
     console.log("Social.RENDER()...", this.props, this.state)
     // console.log(this.state)
     const noUser = this.state.erroredUsers && this.state.erroredUsers.includes(match.params.user_alias)
-    let items = []
-    for (var item in social.items) {
-      items.push({user_id: item, ...social.items[item]})
-    }
 
-    let following = []
-    for (var item in user.following) {
-      following.push({user_id: item, ...user.following[item]})
-    }
+    const items = this.ingestedSocialItems(user, social.items)
     // console.log(social.items)
     // console.log(items)
     // console.log(following)
     return (
       <div>
-        <div>USER: {user.uid}</div>
-        <p><a href="#" onClick={this.handleTestClick}>Test!</a></p>
-        {!noUser && <SocialList isFollowing={false} authUserId={user.uid} idToAlias={user.idToAlias} following={following} items={items} currentId={0} />}
+        {user.uid && <div>SIGNED IN: {user.uid}</div>}
+        {!user.uid && <div>NOT SIGNED IN</div>}
+        {true && <p><a href="#" onClick={this.handleTestClick}>Test!</a></p>}
+        {!noUser && <SocialList onToggleFollow={this.toggleFollow} items={items} />}
         {noUser && <div><h2>Sorry, this page isn't available.</h2><p>The link you followed may be broken, or the page may have been removed. Go back to <a href='/'>homepage</a>.</p></div>}
       </div>
     )
@@ -110,6 +143,9 @@ const mapDispatchToProps = dispatch => ({
   getUserDataFromAlias: aliasName => dispatch(getUserDataFromAlias(aliasName)),
   getUserIdFromAlias: aliasName => dispatch(getUserIdFromAlias(aliasName)),
   getUserCred: () => dispatch(getAuthUser()),
+  getFollowing: (userId) => dispatch(getFollowing(userId)),
+  toggleFollowAction: (userId, doFollow) => dispatch(toggleFollowUser(userId, doFollow)),
+  updateFollowing: (user, items, doFollow) => dispatch(updateFollowing(user, items, doFollow)),
 })
 
 export default connect(mapStateToProps, mapDispatchToProps)(Social)

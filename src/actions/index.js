@@ -123,7 +123,22 @@ function fetchPosts(stream, userIds) {
   }
 }
 
-function shouldFetchPosts(posts) {
+function getStreamUserIds(streamKey, user) {
+  if (streamKey === '') {
+    if (!user.isLoading && user.following) {
+      const userIds = [user.uid]
+      const following = Object.keys(user.following)
+      return userIds.concat(following)
+    }
+    return null
+
+  } else  {
+    return [streamKey]
+  }
+}
+
+function shouldFetchPosts(streamKey, state) {
+  const posts = state.postsByStream[streamKey] || {}
   const postsEmpty = Object.keys(posts).length === 0 || posts.items.length === 0
   const postsUnavailable = posts.error && (posts.error.code === "POSTS_EMPTY")
   // console.log(posts, posts.items && posts.items.length === 0, postsUnavailable)
@@ -136,6 +151,29 @@ function shouldFetchPosts(posts) {
     return posts.didInvalidate
   }
 }
+
+export function fetchPostsIfNeeded(streamKey) {
+  return (dispatch, getState) => {
+    const state = getState()
+    console.log(state)
+    // const posts = state.postsByStream[streamKey] || {}
+    // const doFetch = shouldFetchPosts(posts) && userIds.length > 0
+    const doFetch = shouldFetchPosts(streamKey, state)
+    const userIds = getStreamUserIds(streamKey, state.user)
+    // console.log("doFetch????????? ", userIds, doFetch)
+    if (userIds && doFetch) {
+      // console.log("!!!!!!! YES, FETCH...")
+      // const sortedPosts = getSortedPosts(POSTS)
+      // const posts = filterPostsByUser(userIds, sortedPosts)
+      // dispatch(requestPosts(streamKey))
+      // dispatch(receivePosts(streamKey, posts))
+      // dispatch(updateQueue(posts.map(post=>post.lyd_id)))
+      dispatch(fetchPosts(streamKey, userIds))
+    }
+  }
+}
+
+
 const POSTS = {"-L-jsNBCJhPN2zB9YLR7": {
         "user_id":"F7G80ZQ0QffjiWtHT51tU8ztHRq1",
         "public": true,
@@ -164,23 +202,4 @@ const POSTS = {"-L-jsNBCJhPN2zB9YLR7": {
         "hashtags":["spaghettiwestern"],
         "name":"Sigla di Nino Soprano",
         "source":"https://www.youtube.com/watch?v=RfLIjNWyAzk"}
-}
-
-export function fetchPostsIfNeeded(streamKey, userIds) {
-  return (dispatch, getState) => {
-    const state = getState()
-    console.log(state)
-    const posts = state.postsByStream[streamKey] || {}
-    const doFetch = shouldFetchPosts(posts) && userIds.length > 0
-    // console.log("doFetch????????? ", doFetch, posts)
-    if (doFetch) {
-      console.log("YES, FETCH...")
-      // const sortedPosts = getSortedPosts(POSTS)
-      // const posts = filterPostsByUser(userIds, sortedPosts)
-      // dispatch(requestPosts(streamKey))
-      // dispatch(receivePosts(streamKey, posts))
-      // dispatch(updateQueue(posts.map(post=>post.lyd_id)))
-      dispatch(fetchPosts(streamKey, userIds))
-    }
-  }
 }
