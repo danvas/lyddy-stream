@@ -34,10 +34,11 @@ function filterFollowers(isPublic, followers) {
   return followers.filter(follower => (isPublic === follower.public))
 }
 
-export function receiveSocialNetwork(userId, items) {
+export function receiveSocialNetwork(userId, net, items) {
   return {
     type: RECEIVE_SOCIALNETWORK,
     userId,
+    net,
     items,
     receivedAt: Date.now(),
   }
@@ -167,7 +168,7 @@ export function getSocialNetwork(userId, net) {
       getSocialNetworkPromise(userId, net)
       .then(items => {
         console.log(items)
-        dispatch(receiveSocialNetwork(userId, items))
+        dispatch(receiveSocialNetwork(userId, net, items))
       })
       .catch(err => {
         console.log(err.message)

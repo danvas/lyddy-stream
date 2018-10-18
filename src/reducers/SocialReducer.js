@@ -41,7 +41,9 @@ export default function(state=defState, action) {
       }
     case RECEIVE_SOCIALNETWORK:
       return {...state,
+        net: action.net,
         items: action.items,
+        userId: action.userId,
         lastUpdated: action.receivedAt,
         userNetworkDbCallStack,
         isFetching

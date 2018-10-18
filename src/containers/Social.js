@@ -24,7 +24,7 @@ class Social extends Component {
   componentDidMount() {
     console.log("Social.componentDidMOUNT()...")
     // console.log(this.props)
-    const { history, match, getUserIdFromAlias, getUserCred, getSocialNetwork, user } = this.props
+    const { history, match, getUserDataFromAlias, getUserCred, getSocialNetwork, user } = this.props
     let userId = "XWKhkvgF6bS5Knkg8cWT1YrJOFq1"
     if (!user.uid) {
       getUserCred()
@@ -32,7 +32,7 @@ class Social extends Component {
 
     const userAlias = match.params['user_alias']
     if (userAlias && !(userAlias in user.aliasToId)) {
-      getUserIdFromAlias(userAlias)
+      getUserDataFromAlias(userAlias)
     }
   }
 
@@ -114,16 +114,16 @@ class Social extends Component {
     const { user, social, match } = this.props
     console.log("Social.RENDER()...", this.props, this.state)
     // console.log(this.state)
+    const userId = user.aliasToId[match.params.user_alias]
     const noUser = this.state.erroredUsers && this.state.erroredUsers.includes(match.params.user_alias)
-
     const items = this.ingestedSocialItems(user, social.items)
     // console.log(social.items)
     // console.log(items)
     // console.log(following)
     return (
       <div>
-        {user.uid && <div>SIGNED IN: {user.uid}</div>}
-        {!user.uid && <div>NOT SIGNED IN</div>}
+        {user.loggedIn && <div>SIGNED IN: {user.uid}</div>}
+        {!user.loggedIn && <a href="/login">Sign in</a>}
         {true && <p><a href="#" onClick={this.handleTestClick}>Test!</a></p>}
         {!noUser && <SocialList onToggleFollow={this.toggleFollow} items={items} />}
         {noUser && <div><h2>Sorry, this page isn't available.</h2><p>The link you followed may be broken, or the page may have been removed. Go back to <a href='/'>homepage</a>.</p></div>}
