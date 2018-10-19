@@ -119,7 +119,7 @@ export function getMutualFollow(authUserId, userId) {
     .then(members => {
       const userIds = Object.keys(members)
       if (userIds.length === 0) {
-        return members
+        resolve(members)
       }
       userIds.sort()
       const firstId = userIds[0]
