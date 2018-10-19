@@ -45,7 +45,7 @@ export function receiveSocialNetwork(userId, net, items) {
 }
 
 export function unfollowUser(userId) {
-    const authUserId = auth.currentUser && auth.currentUser.uid
+    const authUserId = auth && auth.currentUser.uid
     const followersRef = database.child(`user_network/${userId}/followers/${authUserId}`)
     const followingRef = database.child(`user_network/${authUserId}/following/${userId}`)
     let val = null
@@ -103,6 +103,39 @@ export function toggleFollowUser(userId, doFollow) {
       dispatch({type: SOCIAL_TOGGLE_FOLLOW, userId, success: false})
     })
   }
+}
+export function getMutualFollow(authUserId, userId) {
+  return new Promise((resolve, reject) => {
+    if (!authUserId) {
+      alert("Must be signed in!")
+      reject(`User authUserId not authenticated. Authenticate user first.`)
+    }
+    database.child(`user_network/${authUserId}/following`)
+    .once('value').then(snap => {
+      let members = snap.val() || {}
+      members = _.pickBy(members, (value, key) => value.status === 1)
+      return members
+    })
+    .then(members => {
+      const userIds = Object.keys(members)
+      if (userIds.length === 0) {
+        return members
+      }
+      userIds.sort()
+      const firstId = userIds[0]
+      const lastId = userIds[userIds.length - 1]
+      database.child(`user_network/${userId}/followers`)
+      .orderByKey().startAt(firstId).endAt(lastId)
+      .once('value').then(snap => {
+        let followers = snap.val() || {}
+        followers = _.pickBy(followers, (value, key) => {
+          return userIds.includes(key) && (value.status === 1)
+        })
+        resolve(followers)
+      })
+    })
+    .catch(err => reject(err.message))
+  })
 }
 
 export function getSocialNetworkPromise(userId, net, 

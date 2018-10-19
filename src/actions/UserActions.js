@@ -268,9 +268,7 @@ export function fetchUserData(userId) {
                 var userIds = [userId]
                 let aliasToId = {}
                 aliasToId[userData['alias_name']] = snap.key
-                console.log(aliasToId)
                 dispatch(updateAliasMaps(aliasToId))
-                // dispatch(getAliasFromProfiles(userIds.sort()))
                 const isAuthUser = auth.currentUser && (userId === auth.currentUser.uid)
                 dispatch(receiveUserData(userId, userData, isAuthUser))
             }
@@ -294,7 +292,10 @@ export function getUserDataFromAlias(aliasName) {
                 const error = {code: 'USERID_NOT_FOUND', param: aliasName, message: `User '${aliasName}' does not exist.`}
                 dispatch(handleRequestError(error))
             } else {
-                console.log("USER ID!!!..",userId) 
+                console.log("USER ID!!!..",userId)
+                let aliasToId = {}
+                aliasToId[aliasName] = userId
+                dispatch(receiveAliasMaps(aliasToId))
                 dispatch(fetchUserData(userId))
             }
         }, error => console.log(error))

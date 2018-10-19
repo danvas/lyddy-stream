@@ -1,30 +1,14 @@
-import React from 'react';
-import ReactDOM from 'react-dom';
-import './index.css';
-import LyddyStream from './containers/LyddyStream';
-import ProfileMain from './containers/ProfileMain';
-import Social from './containers/Social';
-import registerServiceWorker from './registerServiceWorker';
-import { createLogger } from 'redux-logger'
-import { applyMiddleware, createStore } from 'redux';
-import { Provider } from 'react-redux';
-import thunk from 'redux-thunk';
-import reducers from './reducers/index';
-import { BrowserRouter, Switch, Route, Link } from 'react-router-dom'
-import Login from './containers/Login'
-import CreateAccount from './containers/CreateAccount'
-import { auth }  from './Firebase';
-const LOG = true
-const IGNORED_ACTION = '@@redux'
-const logger = createLogger({
-    level: 'log',
-    predicate: (getState, action) => !action.type.includes(IGNORED_ACTION)
-});
+import React from "react";
+import { BrowserRouter as Router, Switch, Route, Link } from "react-router-dom";
 
-
-const createStoreWithMiddleware = LOG? applyMiddleware(thunk, logger)(createStore) : applyMiddleware(thunk)(createStore)
-
-const store = createStoreWithMiddleware(reducers)
+// This example shows how to render two different screens
+// (or the same screen in a different context) at the same url,
+// depending on how you got there.
+//
+// Click the colors and see them full screen, then "visit the
+// gallery" and click on the colors. Note the URL and the component
+// are the same as before but now we see them inside a modal
+// on top of the old screen.
 
 class ModalSwitch extends React.Component {
   // We can pass a location to <Switch/> that will tell it to
@@ -32,13 +16,13 @@ class ModalSwitch extends React.Component {
   // prop instead.
   //
   // We can also use "location state" to tell the app the user
-  // wants to go to `/gallery/2` in a modal, rather than as the
+  // wants to go to `/img/2` in a modal, rather than as the
   // main page, keeping the gallery visible behind it.
   //
-  // Normally, `/gallery/2` wouldn't match the gallery at `/`.
+  // Normally, `/img/2` wouldn't match the gallery at `/`.
   // So, to get both screens to render, we can save the old
   // location and pass it to Switch, so it will think the location
-  // is still `/` even though its `/gallery/2`.
+  // is still `/` even though its `/img/2`.
   previousLocation = this.props.location;
 
   componentWillUpdate(nextProps) {
@@ -62,16 +46,11 @@ class ModalSwitch extends React.Component {
     return (
       <div>
         <Switch location={isModal ? this.previousLocation : location}>
-            <Route exact path="/" component={LyddyStream} />  
-            <Route path="/gallery" component={Gallery} />
-            <Route path="/gallery/:id" component={ImageView} />
-            <Route path="/create-account" component={CreateAccount} />
-            <Route path="/login" component={Login} />
-            <Route path="/:user_alias/playlists/:playlist" component={LyddyStream} />
-            <Route path="/:user_alias/:social(followers|following)" component={Social} />
-            <Route path="/:user_alias" component={ProfileMain} />
+          <Route exact path="/" component={Home} />
+          <Route path="/gallery" component={Gallery} />
+          <Route path="/img/:id" component={ImageView} />
         </Switch>
-        {isModal ? <Route path="/gallery/:id" component={Modal} /> : null}
+        {isModal ? <Route path="/img/:id" component={Modal} /> : null}
       </div>
     );
   }
@@ -111,10 +90,10 @@ const Home = () => (
     <h2>Featured Images</h2>
     <ul>
       <li>
-        <Link to="/gallery/2">Tomato</Link>
+        <Link to="/img/2">Tomato</Link>
       </li>
       <li>
-        <Link to="/gallery/4">Crimson</Link>
+        <Link to="/img/4">Crimson</Link>
       </li>
     </ul>
   </div>
@@ -126,7 +105,7 @@ const Gallery = () => (
       <Link
         key={i.id}
         to={{
-          pathname: `/gallery/${i.id}`,
+          pathname: `/img/${i.id}`,
           // this is the trick!
           state: { modal: true }
         }}
@@ -195,15 +174,10 @@ const Modal = ({ match, history }) => {
   );
 };
 
-const App = () => (
-    <Provider store={store}>
-        <BrowserRouter>
-            <Route component={ModalSwitch} />
-        </BrowserRouter>
-    </Provider>
-)
+const ModalGallery = () => (
+  <Router>
+    <Route component={ModalSwitch} />
+  </Router>
+);
 
-ReactDOM.render(
-    <App/>, 
-    document.getElementById('root'));
-// registerServiceWorker();
+export default ModalGallery;
