@@ -1,13 +1,16 @@
 import React, { Component } from 'react'
+import { BrowserRouter, Switch, Route, Link } from 'react-router-dom'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
+import LyddyStream from './LyddyStream';
+import Social from './Social';
 import { updateFollowing, getUserIdFromAlias, handleRequestError, isLoggedIn, getAuthUser, 
   getUserDataFromAlias, fetchUserData, logOut, getFollowing } from '../actions/UserActions'
-import { getMutualFollow, toggleFollowUser, followUser, unfollowUser, getSocialNetwork, acceptFollower, removePendingRequest  } from '../actions/SocialActions'
+import { getMutualFollowPromise, getMutualFollow, toggleFollowUser, followUser, unfollowUser, getSocialNetwork, acceptFollower, removePendingRequest  } from '../actions/SocialActions'
 
 import _ from 'lodash'
 
-const renderProfilePhoto = props => {
+const ProfilePhoto = props => {
   const { userAlias, isAuthUser } = props
   console.log(props)
   // const userAlias = "nielvas"// props.userAlias
@@ -34,41 +37,38 @@ const renderProfilePhoto = props => {
   }
 }
 
-const renderMutualFollowers = props => {
-  const { userAlias, isAuthUser, social } = props
-  const socialItems = Object.values(social.items)
-  // const followers = []//["scout_berry", "anniegallos", "openstudiosvan", "someUser1", "someUser2"] // user.followers
-  // for (var item in socialItems) {
-  //   followers.push(follower.alias_name)
-  // }
-  const followers = socialItems.map(item => item.alias_name)
-  console.log(followers)
-  const MAX = (followers.length < 3)? followers.length : 3
-  const mutualFollowers = followers.slice(0, MAX).map((follower, idx) => {
-      const keyId = idx // follower.userId
-      var followerName
-      if (idx < (MAX - 1)) {
-        followerName = `${follower}, `
-      } else if (idx === (MAX - 1)) {
-        followerName = `${follower} `
-      }
-      // console.log(followerName)
-      return (<span key={keyId} >{followerName}</span>)
+const MutualFollowersList = props => {
+  const followers = Object.values(props.socialItems)
+  // const followerNames =["lalal", "scout_berry", "anniegallos", "openstudiosvan", "someUser1", "someUser2"] // user.followers
+  const followerNames = followers.map(item => item.alias_name)
+  console.log(followerNames)
+  const MAX = (followerNames.length < 3)? followerNames.length : 3
+  console.log(followerNames.slice(0, MAX))
+  const mutualFollowers = followerNames.slice(0, MAX).map((follower, idx) => {
+    var followerName
+    if (idx < (MAX - 1)) {
+      followerName = <span><b>{follower}</b>, </span>
+    } else if (idx === (MAX - 1)) {
+      followerName = <span><b>{follower}</b></span>
+    }
+    return (<span key={idx}>{followerName}</span>)
     })
+  
+  if (mutualFollowers.length === 0) {
+    return null
+  }
 
-  const otherFollowers = (followers.length > MAX)? `+ ${followers.length - MAX} more` : ""
-  return (
-    <a href={`/${userAlias}/followers/mutualOnly`}>
-      <span>Followed by {mutualFollowers} {otherFollowers}</span>
-    </a>
-  )
+  const moreFollowersNum = (followerNames.length > MAX)? `+ ${followerNames.length - MAX} more` : null  
+  console.log(mutualFollowers)
+  console.log(moreFollowersNum)
+  return <span>Followed by {mutualFollowers} {moreFollowersNum}</span>
 }
 
 const ProfilePage = props => {
   console.log(props)
-  const { userAlias, isAuthUser } = props
+  const { userAlias, isAuthUser, social } = props
   const fullName = "(full name here)"
-  const profileDescription = "(some profile spiel here)"
+  const profileDescription = "(some profile blurb here)"
   const aliasImage = "https://instagram.fybz1-1.fna.fbcdn.net/vp/1c682c4c0118c5301d3b2ff86242f467/5C5F6EE6/t51.2885-19/11849347_863967993699451_152431936_a.jpg" // props.aliasImage
   const postsTotal = 344// props.postsTotal
   const followersTotal = 178// props.followersTotal
@@ -84,52 +84,46 @@ const ProfilePage = props => {
   return (
     <main>
       <div>
-
         <header>
-          {renderProfilePhoto(props)}
+          <ProfilePhoto userAlias={userAlias} isAuthUser={isAuthUser} />
           <section>
             <div>
-              {isAuthUser && <div><h1 title={userAlias}>{userAlias}</h1><a href="/accounts/edit/"><button type="button">Edit Profile</button></a></div>}
+              <h1 title={userAlias}>{userAlias}</h1>
+              {isAuthUser && <div><a href="/accounts/edit/"><button type="button">Edit Profile</button></a></div>}
               {!isAuthUser && <button type="button">Follow</button>}
               <div><button><span aria-label="Options"></span></button></div>
             </div>
-            <ul>
-              <li><span><span>{postsTotal}</span> posts</span></li>
-              <li><a href={`/${userAlias}/followers/`}><span title={followersTotal}>{followersTotal}</span> followers</a></li>
-              <li><a href={`/${userAlias}/following/`}><span>{followingTotal}</span> following</a></li>
-            </ul>
+            <div>
+              <span><span>{postsTotal}</span> posts </span>
+              <span><a href={`/${userAlias}/followers/`}><span title={followersTotal}>{followersTotal}</span> followers </a></span>
+              <span><a href={`/${userAlias}/following/`}><span>{followingTotal}</span> following</a></span>
+            </div>
             <h1>{fullName}</h1>
             <div><span>{profileDescription}</span> </div>
-            {renderMutualFollowers(props)}
+            {!isAuthUser && (social.net === "mutual") && <a href={`/${userAlias}/followers`}><MutualFollowersList socialItems={props.social.items}/></a>}
           </section>
-
         </header>
-
         <div>
-          <a href="/{userAlias}/">
             <span>
               <div></div>
-              <span>Posts</span>
+              <Link to={`/${userAlias}/`}>Posts</Link>
             </span>
-          </a>
-          <a href="/{userAlias}/saved/">
             <span>
               <div></div>
-              <span>Saved</span>
+              <Link to={`/${userAlias}/saved`}>Saved</Link>
             </span>
-          </a>
-          <a href="/{userAlias}/tagged/">
             <span>
               <div></div>
-              <span>Tagged</span>
+              <Link to={`/${userAlias}/tagged`}>Tagged</Link>
             </span>
-          </a>
         </div>
 
       </div>
     </main>
   )
 }
+
+
 class Profile extends Component {
   constructor(props) {
     console.log("Profile.constructor()...")
@@ -139,15 +133,14 @@ class Profile extends Component {
   }
 
   handleTestClick(e) {
-    const { match, authUser, aliasToId } = this.props
+    const { match, authUser, aliasToId, getMutualFollowers } = this.props
     console.log("Profile.handleTestClick()...")
     e.preventDefault()
     console.log(this.props) 
     // getMutualFollow(authUser.uid, 'F7G80ZQ0QffjiWtHT51tU8ztHRq1')
     const userId = aliasToId[match.params.user_alias]
-    getMutualFollow(authUser.uid, userId)
-    .then(followers => console.log(followers))
-
+    // acceptFollower("XWKhkvgF6bS5Knkg8cWT1YrJOFq1")
+    getMutualFollowers(userId)
   }
   componentDidMount() {
     console.log("Profile.componentDidMOUNT()...")
@@ -164,23 +157,25 @@ class Profile extends Component {
   }
 
   static getDerivedStateFromProps(nextProps, prevState){
-    const { match, aliasToId, getSocialNetwork, social } = nextProps
+    const { match, aliasToId, authUser, getMutualFollowers, social } = nextProps
     console.log(nextProps)
     const userAlias = match.params['user_alias']
-    if ((userAlias in aliasToId) && !social.isFetching && (social.items.length < 1)) {
-      getSocialNetwork(aliasToId[userAlias], "following") //TODO: Where to put this!?!?!
+    if (authUser.loggedIn && (userAlias in aliasToId) && !social.isFetching && (social.items.length < 1)) {
+      getMutualFollowers(aliasToId[userAlias])
     }
+
     return null
   }
 
   render() {
-    const { match, authUser, aliasToId } = this.props
+    console.log(this.state)
+    const { match, authUser, aliasToId, social } = this.props
     const aliasName = match.params['user_alias'] 
     const userAlias = match.params && match.params['user_alias']
-    const isAuthUser = (authUser.user_alias === userAlias)
+    const isAuthUser = (authUser.alias_name === userAlias)
     const profileProps = {userAlias, isAuthUser}
-    if (!authUser.isLoading && aliasName) {
-      return (
+
+    return (
         <div>
           {true && <p><a href="#" onClick={this.handleTestClick}>Test!</a></p>}
           <ProfilePage 
@@ -188,10 +183,7 @@ class Profile extends Component {
             {...this.props} 
           />
         </div>
-      )
-    } else {
-      return <div>Loading...</div>
-    }
+    )
   }
 }
 // export default ProfileMain
@@ -205,6 +197,7 @@ const mapStateToProps = state => {
 }
  
 const mapDispatchToProps = (dispatch) => ({
+  getMutualFollowers: userId => dispatch(getMutualFollow(userId)),
   getSocialNetwork: (userId, net) => dispatch(getSocialNetwork(userId, net)),
   getUserDataFromAlias: aliasName => dispatch(getUserDataFromAlias(aliasName)),
   getUserCred: () => dispatch(getAuthUser()),
@@ -217,3 +210,7 @@ export default connect(
   mapStateToProps,
   mapDispatchToProps
 )(Profile)
+
+/*
+
+*/

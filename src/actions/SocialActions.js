@@ -104,26 +104,56 @@ export function toggleFollowUser(userId, doFollow) {
     })
   }
 }
-export function getMutualFollow(authUserId, userId) {
+
+export const getActionName = isFollowing => {
+  switch (isFollowing) {
+    case 0:
+      return "Follow"
+    case 1:
+      return "Following"
+    default:
+      return "Requested"
+  }
+}
+
+export function getMutualFollow(userId) {
+  const authUserId = auth.currentUser && auth.currentUser.uid
+  console.log(authUserId)
+  return dispatch => {
+    dispatch(requestSocialNetwork(`getMutualFollow('${userId}')`))
+    getMutualFollowPromise(authUserId, userId)
+    .then(items => {
+      console.log(items)
+      dispatch(receiveSocialNetwork(userId, "mutual", items))
+    })
+    .catch(err => {
+      console.log(err)
+      // const error = {code: 'SOCIAL_EMPTY', param: `${userId}/${net}`, message: err.message}
+      // dispatch(handleFetchError(userId, error))
+    })
+  }
+}
+
+export function getMutualFollowPromise(authUserId, userId) {
   return new Promise((resolve, reject) => {
     if (!authUserId) {
-      alert("Must be signed in!")
       reject(`User authUserId not authenticated. Authenticate user first.`)
     }
     database.child(`user_network/${authUserId}/following`)
     .once('value').then(snap => {
       let members = snap.val() || {}
+      console.log(members)
       members = _.pickBy(members, (value, key) => value.status === 1)
       return members
     })
     .then(members => {
-      const userIds = Object.keys(members)
-      if (userIds.length === 0) {
-        resolve(members)
-      }
+      const userIds = Object.keys(members)//.concat(authUserId) // TODO: Include auth user?
       userIds.sort()
       const firstId = userIds[0]
       const lastId = userIds[userIds.length - 1]
+      console.log(userIds)
+      console.log(firstId)
+      console.log(lastId)
       database.child(`user_network/${userId}/followers`)
       .orderByKey().startAt(firstId).endAt(lastId)
       .once('value').then(snap => {
@@ -136,9 +166,39 @@ export function getMutualFollow(authUserId, userId) {
     })
     .catch(err => reject(err.message))
   })
+  .then(followers => {
+    return mergeProfileDataPromise(followers)
+  })
+}
+// Could I add a `mutualFirst` parameter here 
+// instead of having a separate `getMutualFollowPromise`??
+export function getSocialNetworkPromise(userId, net, 
+  filterByStatus=1, mergeProfileData=true, mutualFirst=false) {
+  return new Promise((resolve, reject) => {
+    database.child(`user_network/${userId}/${net}`)
+    .once('value').then(snap => {
+      let members = snap.val() || {}
+      console.log(members)
+      if (filterByStatus !== undefined) {
+        members = _.pickBy(members, 
+          (value, key) => filterByStatus === value.status)
+      }
+      resolve(members)
+    })
+    .catch(dbError => {
+      reject(new Error(dbError.message))
+    })
+
+  }).then(members => {
+    if (mergeProfileData) {
+      return mergeProfileDataPromise(members)
+    } else {
+      return members
+    }
+  })
 }
 
-export function getSocialNetworkPromise(userId, net, 
+export function _getSocialNetworkPromise(userId, net, 
   filterByStatus=1, mergeProfileData=true) {
   return new Promise((resolve, reject) => {
     database.child(`user_network/${userId}/${net}`)
@@ -224,8 +284,8 @@ export function acceptFollower(userId) {
     const ref = database.child(`user_network/${authUserId}/followers/${userId}`)
     const followingRef = database.child(`user_network/${userId}/following/${authUserId}`)
     const val = {'date_added': moment().format(), 'status': 1}
-    ref.update(val, (something)=>{
-        console.log(`accepted follower '${userId}'!!`, something)
+    ref.update(val, () => {
+        console.log(`accepted follower '${userId}'!!`)
         followingRef.set(val)
     })
     .catch(error=>console.log(error))

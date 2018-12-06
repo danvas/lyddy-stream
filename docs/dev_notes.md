@@ -13,6 +13,7 @@ MAJOR ISSUES:
 
 MINOR ISSUES:
 -------------
+1. When creating a new account, user should update the `Auth.displayName` attribute (otherwise, it's null)
 1. Authentication mechanism conflicted when signed into two different browser tabs.
 1. Country-restricted youtube videos don't play.
 
