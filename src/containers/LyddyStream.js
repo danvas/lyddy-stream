@@ -19,38 +19,30 @@ import { MainPlayer } from './PlayerContainer'
 import SourceSubmitter from '../containers/SourceSubmitter'
 import { auth, usersDatabase, database }  from '../Firebase';
 
-class ErrorBoundary extends Component {
+class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { error: null, errorInfo: null };
+    this.state = { hasError: false };
   }
-  
-  componentDidCatch(error, errorInfo) {
-    // Catch errors in any components below and re-render with error message
-    this.setState({
-      error: error,
-      errorInfo: errorInfo
-    })
-    // You can also log error messages to an error reporting service here
+
+  static getDerivedStateFromError(error) {
+    // Update state so the next render will show the fallback UI.
+    return { hasError: true };
   }
-  
+
+  componentDidCatch(error, info) {
+    // You can also log the error to an error reporting service
+    console.error(error, info);
+  }
+
   render() {
-    if (this.state.errorInfo) {
-      // Error path
-      return (
-        <div>
-          <h2>Something went wrong.</h2>
-          <details style={{ whiteSpace: 'pre-wrap' }}>
-            {this.state.error && this.state.error.toString()}
-            <br />
-            {this.state.errorInfo.componentStack}
-          </details>
-        </div>
-      );
+    if (this.state.hasError) {
+      // You can render any custom fallback UI
+      return <h1>Something went wrong.</h1>;
     }
-    // Normally, just render children
-    return this.props.children;
-  }  
+
+    return this.props.children; 
+  }
 }
 
 class LyddyStream extends Component {
@@ -202,6 +194,7 @@ class LyddyStream extends Component {
     const hasError = (user.error.code !== undefined) && (user.error.code !== 'USER_UNAUTHENTICATED')
     const isPrivate = (user.profiles[selectedStream] && !user.profiles[selectedStream]['public']) && !user.loggedIn
     return (
+      <ErrorBoundary>
       <div>
        {user.loggedIn && <button onClick={this.handleLogout}>Sign out</button>}
        {!isPrivate && !user.loggedIn && <a href="/login">Sign in</a>}
@@ -237,6 +230,7 @@ class LyddyStream extends Component {
           <LydList isPlaying={player.playing} authUserId={user.uid} idToAlias={user.idToAlias} posts={posts} currentId={player.currentId} />
           </div>}
       </div>
+      </ErrorBoundary>
     )
   }
 }

@@ -1,5 +1,5 @@
 import { auth, usersDatabase, database }  from '../Firebase';
-import { getSocialNetworkPromise } from '../actions/SocialActions'
+import { getSocialNetworkPromise2 } from '../actions/SocialActions'
 export const GET_USER = 'GET_USER';
 export const REQUEST_USER_DATA = 'REQUEST_USER_DATA'
 export const RECEIVE_USER_AUTH = 'RECEIVE_USER_AUTH';
@@ -28,10 +28,11 @@ export function handleRequestError(error) {
   }
 }
 
-function updateAuthFollowing(following) {
+export function updateAuthFollowing(userId, socialItem) {
     return {
         type: UPDATE_USER_FOLLOWING, 
-        following
+        userId,
+        socialItem
     } 
 }
 export function receiveAuthFollowing(following) {
@@ -68,8 +69,8 @@ export function updateFollowing(user, following, doFollow) {
         modFollowing = removeFollowing(user, following)
     }
     return dispatch => dispatch(updateAuthFollowing(modFollowing))
-
 }
+
 export function getAuthUser() {
     // console.log("getUser!")
     return dispatch => {
@@ -81,7 +82,7 @@ export function getAuthUser() {
                     dispatch(receiveAuthData(user))
                     let aliasToId = {}
                     aliasToId[user.displayName] = user.uid
-                    console.log(aliasToId)
+                    // console.log(aliasToId)
                     dispatch(updateAliasMaps(aliasToId))
                     dispatch(setupAuthUser())
                 } else {
@@ -124,7 +125,7 @@ export function setupAuthUser() {
 export function getFollowing(userId) {
     return dispatch => {
       dispatch(requestUserData('getFollowing'))
-      getSocialNetworkPromise(userId, "following")
+      getSocialNetworkPromise2(null, userId, "following", false, false, 1)
       .then(members => {
         dispatch(receiveAuthFollowing(members))
         return members
@@ -139,7 +140,7 @@ export function getFollowing(userId) {
         dispatch(updateAliasMaps(aliasToId))
       })
       .catch(err => {
-        console.log(err.message)
+        console.log(err)
         const error = {code: 'SOCIAL_EMPTY', param: `${userId}/following`, message: err.message}
         dispatch(handleRequestError(error))
       })
@@ -287,12 +288,12 @@ export function getUserDataFromAlias(aliasName) {
         userIdRef.once('value')
         .then(snap => {
             const userId = snap.val()
-            console.log(userId)
+            // console.log("!!!!!!!!!!", userId)
             if (userId === null) {
                 const error = {code: 'USERID_NOT_FOUND', param: aliasName, message: `User '${aliasName}' does not exist.`}
                 dispatch(handleRequestError(error))
             } else {
-                console.log("USER ID!!!..",userId)
+                // console.log("USER ID!!!..",userId)
                 let aliasToId = {}
                 aliasToId[aliasName] = userId
                 dispatch(receiveAliasMaps(aliasToId))

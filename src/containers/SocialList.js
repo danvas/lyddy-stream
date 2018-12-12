@@ -2,20 +2,25 @@ import React from 'react'
 import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
 import SocialItem from '../components/SocialItem';
-import { toggleFollowUser, doUnfollowUser, followUser, unfollowUser, getActionName } from '../actions/SocialActions';
+import { toggleFollowUser, followUser, unfollowUser, getFollowStatusName } from '../actions/SocialActions';
 import { deletePost } from '../actions/PostActions';
 import { togglePlay } from '../actions/PlayerActions';
 import { fetchUserData, updateFollowing } from '../actions/UserActions';
+import SocialButton from '../containers/SocialButton'
 
 
 const SocialItemsList = props => {
-    const { items, onToggleFollow } = props
+    const { items, onToggleFollow, authUserId } = props
+    // console.log(props)
+    // console.log(items)
     return items.map(user => {
+      const socialButton = (user.user_id === authUserId? null : <SocialButton socialItem={user} />)
       return (
           <SocialItem key={user.user_id}
                    onToggleFollow={e => {onToggleFollow(user, e)}}
-                   followButtonName={getActionName(user.isFollowing)}
+                   socialButton={socialButton}
                    userName={user.alias_name}
+                   userId={user.user_id}
                    {...user} 
           />
       )

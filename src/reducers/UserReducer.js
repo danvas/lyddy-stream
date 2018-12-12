@@ -82,6 +82,14 @@ export default function(state=defState, action) {
             }
 
         case UPDATE_USER_FOLLOWING:
+            let following = {...state.following}
+            if (action.socialItem) {
+                following[action.userId] = {...action.socialItem}
+            } else {
+                delete following[action.userId]
+            }
+            return {...state, following, isLoading, pendRequests}
+        
         case RECEIVE_USER_FOLLOWING:
             return {...state, following: {...action.following}, isLoading, pendRequests}
 

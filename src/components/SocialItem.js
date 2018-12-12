@@ -11,7 +11,7 @@ const SocialItem = props => {
     <div>
       <span>
         <div><a href={userLink}>{props.userName}</a></div>
-        {props.isFollowing !== null && <button onClick={props.onToggleFollow}>{props.followButtonName}</button>}
+        {props.socialButton}
       </span>
       {false && <a href={props.source} target="_blank">source</a>}
       <hr></hr>
