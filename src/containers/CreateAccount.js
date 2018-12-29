@@ -6,6 +6,7 @@ import ErrorAlert from '../components/ErrorAlert'
 import { createAccount, setUser } from '../actions/UserActions'
 import { connect } from 'react-redux';
 
+
 class CreateAccount extends Component {
     constructor(props) {
         super(props);
@@ -21,7 +22,7 @@ class CreateAccount extends Component {
 
         if(email === '' || password === '' || confirmPassword === '') {
             this.setState({
-                error: 'Please enter all fields.'
+                error: 'Please enter required fields.'
             });
             return false;
         }
@@ -35,14 +36,24 @@ class CreateAccount extends Component {
 
         return true;
     }
+    
     submitAccount(event) {
+        const { createAccount, history } = this.props
         event.preventDefault();
         if (!this.isValid()) {
             return;
         }
-        this.props.createAccount(this.state.email, this.state.password).then( newUser => {
-            setUser(newUser.uid)
-            this.props.history.replace('/');
+        const tempUsername = this.state.email.split('@')[0]
+        const photoURL = "http://lorempixel.com/200/200"
+        createAccount(this.state.email, this.state.password)
+        .then(newUser => {
+            console.log("***********", newUser)
+            setUser(newUser.user.uid, tempUsername, photoURL, '', '', true)
+            newUser.user.updateProfile({
+                displayName: tempUsername,
+                photoURL
+            })
+            history.replace('/');
         }).catch(err => {
             this.setState({ error: err.message })});
     }

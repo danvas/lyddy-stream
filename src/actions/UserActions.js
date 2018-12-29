@@ -194,24 +194,22 @@ export function createAccount(email, password) {
     return dispatch => auth.createUserWithEmailAndPassword(email, password);
 }
 
-export function setUser(userId) {
-    // const newMessageRef = usersDatabase.push();
-    // newMessageRef.set({
-    //   'user_id': 'ada',
-    //   'text': 'The Analytical Engine weaves algebraical patterns just as the Jacquard loom weaves flowers and leaves.'
-    // });
-    let playlists = {}
-    playlists[userId] = [""]
-    
+export function setUser(userId, userName, userImage, bio, website, isPublic) {
+    console.log(userId, userName, bio, website, isPublic)
     const userData = {
-        alias_name: 'newguy',
-        following: {},
-        followers: {},
-        playlists       
+        alias_name: userName,
+        alias_image: userImage,
+        bio: bio,
+        website: website,
+        public: isPublic
     }
-    let userRef = usersDatabase.child(`${userId}`)
+    const userRef = usersDatabase.child(`${userId}`)
     // let newJobRef = userRef.push();
     userRef.set(userData);
+    const aliasNames = {}
+    aliasNames[userName] = userId
+    database.child('alias_names').child(userName).set(userId)
+    .then(z => console.log("seting alias names!!!!!!!!", z, aliasNames))
 }
 
 
