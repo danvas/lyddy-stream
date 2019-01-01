@@ -68,15 +68,17 @@ class Social extends Component {
     // console.log("Social.handleTestClick()...")
     e.preventDefault()
     // console.log(this.props) 
-    const { getSocialNetwork, match, selectedUserId, user } = this.props
+    const { getSocialNetwork, match, selectedUserId, user, getMutualNetwork } = this.props
     // followUser('F7G80ZQ0QffjiWtHT51tU8ztHRq1')
     // followUser('FAKE18j0iqfqffwhtqz10tgurz8t')
     // followUser('XWKhkvgF6bS5Knkg8cWT1YrJOFq1')
     // acceptFollower('XWKhkvgF6bS5Knkg8cWT1YrJOFq1')
     const { user_alias, social } = match.params
     const userId = user.aliasToId[user_alias]
+    const net = match.params['social']
     // console.log(userId, social)
-    getSocialNetwork(userId, social, false, false, 0)
+    // getSocialNetwork(userId, social, false, false, 0)
+    getMutualNetwork(userId, net)
   }
 
   toggleFollow = (user, event) => {
@@ -89,7 +91,7 @@ class Social extends Component {
 
   render() {
     const { user, social, match } = this.props
-    // console.log("Social.RENDER()...", this.props, this.state)
+    console.log("Social.RENDER()...", this.props.social)
     // console.log(this.state)
     const userId = user.aliasToId[match.params.user_alias]
     const noUser = this.state.erroredUsers && this.state.erroredUsers.includes(match.params.user_alias)

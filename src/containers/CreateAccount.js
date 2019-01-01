@@ -44,7 +44,8 @@ class CreateAccount extends Component {
             return;
         }
         const tempUsername = this.state.email.split('@')[0]
-        const photoURL = "http://lorempixel.com/200/200"
+        const randomChoice = Math.floor((Math.random() * 10) + 1);
+        const photoURL = `http://lorempixel.com/300/300/abstract/${randomChoice}`
         createAccount(this.state.email, this.state.password)
         .then(newUser => {
             console.log("***********", newUser)

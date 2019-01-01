@@ -1,8 +1,7 @@
 import React, { Component } from 'react'
-import { BrowserRouter, Switch, Route, Link } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import LyddyStream from './LyddyStream';
 import Social from './Social';
 import SocialButton from './SocialButton'
 import { updateFollowing, getUserIdFromAlias, handleRequestError, isLoggedIn, getAuthUser, 
@@ -13,16 +12,11 @@ import { getMutualFollowPromise, getSocialItemPromise, getSocialItems, toggleFol
 import _ from 'lodash'
 
 const ProfilePhoto = props => {
-  const { userAlias, isAuthUser } = props
-  // console.log(props)
-  // const userAlias = "nielvas"// props.userAlias
-  const aliasImage = "" // props.aliasImage
-  // const isAuthUser = true // props.uid
-
-  if (isAuthUser) {
+  console.log("PROFILE PHOTO!!!!!!!!", props)
+  if (props.isAuthUser) {
     return (
       <div>
-        <button title="Change Profile Photo"><img src={aliasImage} alt="Change Profile Photo"/></button>
+        <button title="Change Profile Photo"><img src={props.src} alt="Change Profile Photo" width="72" height="72"/></button>
         <div>
           <form encType="multipart/form-data"><input accept="image/jpeg,image/png" type="file"/></form>
         </div>
@@ -32,7 +26,7 @@ const ProfilePhoto = props => {
     return (
       <div>
         <div role="button">
-          <span role="link"><img src={aliasImage} alt={`${userAlias}'s profile picture`}/></span>
+          <span role="link"><img src={props.src} alt={`${props.userAlias}'s profile picture`} width="72" height="72"/></span>
         </div>
       </div>
     )
@@ -68,7 +62,8 @@ const MutualFollowersList = props => {
 
 const ProfilePage = props => {
   // console.log(props)
-  const { userAlias, isAuthUser, social, socialButton, authUser, mutualFollowers } = props
+  const { userAlias, isAuthUser, social, socialButton, profilePhoto, authUser, mutualFollowers } = props
+  console.log(props)
   const fullName = "(full name here)"
   const profileDescription = "(some profile blurb here)"
   const aliasImage = "https://scontent-cdg2-1.cdninstagram.com/vp/65d9b73322d1606dc1dfebdbddea4c92/5C98EDCB/t51.2885-19/43604192_1503270776440181_4797495013846024192_n.jpg" // props.aliasImage
@@ -87,7 +82,7 @@ const ProfilePage = props => {
     <main>
       <div>
         <header>
-          <ProfilePhoto userAlias={userAlias} isAuthUser={isAuthUser} />
+          {profilePhoto}
           <section>
             <div>
               <h1 title={userAlias}>{userAlias}</h1>
@@ -141,7 +136,7 @@ class Profile extends Component {
     // getMutualFollow(authUser.uid, 'F7G80ZQ0QffjiWtHT51tU8ztHRq1')
     const userId = aliasToId[match.params.user_alias]
     // acceptFollower("XWKhkvgF6bS5Knkg8cWT1YrJOFq1")
-    getSocialItemPromise(authUser.uid, "following").then(val=>console.log(val))
+    // getSocialItemPromise(authUser.uid, "following").then(val=>console.log(val))
   }
   componentDidMount() {
     // console.log("Profile.componentDidMOUNT()...")
@@ -163,6 +158,7 @@ class Profile extends Component {
     const userAlias = match.params['user_alias']
     if (authUser.loggedIn && !social.isFetching && (social.items.length < 1)) {
       if (aliasToId[userAlias]) {
+        console.log("GETTING MUTUAL FOLLOWERS!!!!!!!!!!")
         getMutualFollowers(aliasToId[userAlias])
       }
     }
@@ -172,7 +168,7 @@ class Profile extends Component {
 
   render() {
     const { match, authUser, aliasToId, social } = this.props
-    console.log(this.props)
+    console.log("!!!!! Profile.RENDER.... social!", this.props.social)
     const aliasName = match.params['user_alias'] 
     const userAlias = match.params && match.params['user_alias']
     const isAuthUser = (authUser.alias_name === userAlias)
@@ -182,19 +178,20 @@ class Profile extends Component {
     // console.log(socialItems)
     profileProps['mutualFollowers'] = mutualFollowers
     profileProps['followersTotal'] = socialItems.length
-
     if (social.isFetching || !(userAlias.toLowerCase() in aliasToId)) {
       return <div>Loading...</div>
     } else {
       const userId = aliasToId[userAlias]
-      const socialItem = (authUser.following && authUser.following[userId]) || {user_id: userId}
-      // console.log(socialItem)
+      const socialItem = (authUser.following && authUser.following[userId]) || {user_id: userId} //FIXME: This should be initialized with full user data! (Currently, data appears only when authed user is already following or after toggling the follow button.)
+      console.log(socialItem)
       const socialButton = (authUser.following && <SocialButton socialItem={socialItem} />)
+      const profilePhoto = <ProfilePhoto src={socialItem.alias_image} userAlias={userAlias} isAuthUser={isAuthUser} />
       return (
           <div>
             {true && <p><a href="#" onClick={this.handleTestClick}>Test!</a></p>}
             <ProfilePage 
               socialButton={socialButton}
+              profilePhoto={profilePhoto}
               {...profileProps}
               {...this.props} 
             />

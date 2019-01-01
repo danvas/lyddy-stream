@@ -106,7 +106,7 @@ export function followUserPromise(userId) {
     followersRef.set(val)
     .then(() => {
       newFollower[userId] = val
-      // console.log(newFollower)
+      console.log(newFollower)
       followingRef.set(val, resolve(newFollower))
     })
     .catch(err=>{
@@ -115,7 +115,7 @@ export function followUserPromise(userId) {
       followersRef.set(val)
       .then(() => {
         newFollower[userId] = val
-        // console.log(newFollower)
+        console.log(newFollower)
         followingRef.set(val, resolve(newFollower))
       })
       .catch((err) => { reject(err.message)})
@@ -132,7 +132,8 @@ export function followUser(userId) {
 }
 
 export function performFollowAction(userId, doFollow) {
-  return dispatch => {
+  return (dispatch, getState) => {
+    
     var toggledFollow 
     if (doFollow) {
       toggledFollow = followUserPromise(userId)  
