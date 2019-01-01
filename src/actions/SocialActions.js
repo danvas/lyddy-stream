@@ -4,6 +4,7 @@ import { updateAuthFollowing } from '../actions/UserActions'
 import _ from 'lodash'
 export const REQUEST_SOCIALNETWORK = 'REQUEST_SOCIALNETWORK'
 export const RECEIVE_SOCIALNETWORK = 'RECEIVE_SOCIALNETWORK'
+export const UPDATE_SOCIALNETWORK_ITEM = 'UPDATE_SOCIALNETWORK_ITEM'
 export const HANDLE_SOCIAL_ERROR = 'HANDLE_SOCIAL_ERROR'
 export const SOCIAL_TOGGLE_FOLLOW = 'SOCIAL_TOGGLE_FOLLOW'
 const UNFOLLOW_CODE = 0
@@ -50,6 +51,14 @@ export function receiveSocialNetwork(userId, net, items) {
     receivedAt: Date.now(),
   }
 }
+export function updateSocialNetworkItem(userId, item) {
+  return {
+    type: UPDATE_SOCIALNETWORK_ITEM,
+    receivedAt: Date.now(),
+    userId,
+    item
+  }
+}
 
 export function unfollowUserPromise(userId) {
   const authUserId = auth && auth.currentUser.uid
@@ -58,12 +67,18 @@ export function unfollowUserPromise(userId) {
     const followingRef = database.child(`user_network/${authUserId}/following/${userId}`)
     followersRef.set(null)
     .then(() => {
-      followingRef.set(null, resolve(null))
+      const unfollowedUsers = {}
+      unfollowedUsers[userId] = {user_id: userId, status: UNFOLLOW_CODE}
+      followingRef.set(null, resolve(unfollowedUsers))
     })
     .catch(err=>{
       // console.log("UNFOLLOW didn't work!!!!!! ", err.code)
       reject(err.message)
     })     
+  })
+    .then(unfollowed => {
+    // console.log(newFollower)
+    return mergeProfileDataPromise(unfollowed)
   })
 }
 
@@ -128,8 +143,10 @@ export function performFollowAction(userId, doFollow) {
     toggledFollow
     .then(followers => {
       const socialItem = followers && followers[userId]
-      dispatch(updateAuthFollowing(userId, socialItem))
+      console.log(socialItem)
       dispatch({type: SOCIAL_TOGGLE_FOLLOW, userId, toggledFollow: doFollow, success: true})
+      dispatch(updateAuthFollowing(userId, socialItem))
+      dispatch(updateSocialNetworkItem(userId, socialItem))
     }).catch(err => {
       dispatch({type: SOCIAL_TOGGLE_FOLLOW, userId, success: false})
     })

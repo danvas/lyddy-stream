@@ -9,18 +9,18 @@ import { fetchUserData, updateFollowing } from '../actions/UserActions';
 import SocialButton from '../containers/SocialButton'
 
 
-const SocialItemsList = props => {
-    const { items, onToggleFollow, authUserId } = props
-    // console.log(props)
+export const SocialItemsList = props => {
+    const { items, authUserId } = props
+    console.log(props)
     // console.log(items)
     return items.map(user => {
       const socialButton = (user.user_id === authUserId? null : <SocialButton socialItem={user} />)
       return (
           <SocialItem key={user.user_id}
-                   onToggleFollow={e => {onToggleFollow(user, e)}}
                    socialButton={socialButton}
                    userName={user.alias_name}
                    userId={user.user_id}
+                   sourceImg={user.alias_image}
                    {...user} 
           />
       )
@@ -36,7 +36,7 @@ SocialItemsList.propTypes = {
 //   updateFollowing: items => dispatch(updateFollowing(items)),
 // })
  
-export const SocialList = connect(
-  null, 
-  null
-)(SocialItemsList)
+// export const SocialList = connect(
+//   null, 
+//   null
+// )(SocialItemsList)

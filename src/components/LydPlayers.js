@@ -57,7 +57,7 @@ export class MainPlayer extends Component {
             <div style={divStyle}>
               <h1 style={h1Style}>{lyd? lyd.name : ''}</h1>
               <ArtistNames style={h1Style} artists={lyd? lyd.artists : []} delimiter={' • '} />
-              <button onClick={onTogglePlay}>{isPlaying ? 'Pause' : 'Play'}</button>
+              <button onClick={() => onTogglePlay(lyd.lyd_id)}>{isPlaying ? 'Pause' : 'Play'}</button>
               <button disabled={!isPlaying} onClick={onBack}>Back</button>
               <button disabled={!isPlaying} onClick={onNext}>Next</button>
             </div>

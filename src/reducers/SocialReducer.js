@@ -7,6 +7,7 @@ import {
   SELECT_USER,
   REQUEST_SOCIALNETWORK,
   RECEIVE_SOCIALNETWORK,
+  UPDATE_SOCIALNETWORK_ITEM,
   HANDLE_SOCIAL_ERROR,
   SOCIAL_TOGGLE_FOLLOW
 } from '../actions/SocialActions'
@@ -14,7 +15,7 @@ import {
 const defState = {
     isFetching: false,
     userNetworkDbCallStack: [],
-    items: []
+    items: {}
   }
 
 export default function(state=defState, action) {
@@ -29,7 +30,7 @@ export default function(state=defState, action) {
   switch (action.type) {
     case HANDLE_SOCIAL_ERROR:
       return {...state, 
-        items: [],
+        items: {},
         error: action.error,
         isFetching,
         userNetworkDbCallStack
@@ -43,10 +44,16 @@ export default function(state=defState, action) {
       return {...state,
         net: action.net,
         items: action.items,
-        userId: action.userId,
         lastUpdated: action.receivedAt,
         userNetworkDbCallStack,
         isFetching
+      }    
+    case UPDATE_SOCIALNETWORK_ITEM:
+      const items = {...state.items}
+      items[action.userId] = {...action.item}
+      return {...state,
+        lastUpdated: action.receivedAt,
+        items,
       }
     case SOCIAL_TOGGLE_FOLLOW:
       return {...state, 

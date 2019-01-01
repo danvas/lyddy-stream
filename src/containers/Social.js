@@ -7,7 +7,7 @@ import { updateFollowing, getUserIdFromAlias, handleRequestError, isLoggedIn, ge
 import { toggleFollowUser, followUser, unfollowUser, getSocialItems, acceptFollower, removePendingRequest } from '../actions/SocialActions'
 
 import { updateQueue } from '../actions/PlayerActions'
-import { SocialList } from '../containers/SocialList'
+import { SocialItemsList } from '../containers/SocialList'
 import Posts from '../components/Posts';
 import PostLydModal from '../components/PostLydModal';
 import { auth, usersDatabase, database }  from '../Firebase';
@@ -45,9 +45,8 @@ class Social extends Component {
     const userAlias = match.params['user_alias']
     const net = match.params['social']
     const userId = user.aliasToId[userAlias]
-    // console.log(userId, social.isFetching)
-    if (social.items.length === 0 && userId && !social.isFetching && !(social.error)) {
-      // console.log("GET SOCIAL NETWORK!!")
+    if (Object.values(social.items).length === 0 && userId && !social.isFetching && !(social.error)) {
+      console.log("GET SOCIAL NETWORK!!")
       getMutualNetwork(userId, net)
     }
     if (user.error.code === 'USERID_NOT_FOUND') {
@@ -101,7 +100,7 @@ class Social extends Component {
         {user.loggedIn && <div>SIGNED IN: {user.uid}</div>}
         {!user.loggedIn && <a href="/login">Sign in</a>}
         {true && <p><a href="#" onClick={this.handleTestClick}>Test requests!</a></p>}
-        {!noUser && <SocialList authUserId={user.uid} onToggleFollow={this.toggleFollow} items={Object.values(social.items)} />}
+        {!noUser && <SocialItemsList authUserId={user.uid} onToggleFollow={this.toggleFollow} items={Object.values(social.items)} />}
         {noUser && <div><h2>Sorry, this page isn't available.</h2><p>The link you followed may be broken, or the page may have been removed. Go back to <a href='/'>homepage</a>.</p></div>}
       </div>
     )
