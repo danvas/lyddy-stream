@@ -1,5 +1,5 @@
 import { auth, usersDatabase, database }  from '../Firebase';
-import { getSocialNetworkPromise2 } from '../actions/SocialActions'
+import { getSocialNetworkPromise } from '../actions/SocialActions'
 export const GET_USER = 'GET_USER';
 export const REQUEST_USER_DATA = 'REQUEST_USER_DATA'
 export const RECEIVE_USER_AUTH = 'RECEIVE_USER_AUTH';
@@ -125,7 +125,7 @@ export function setupAuthUser() {
 export function getFollowing(userId) {
     return dispatch => {
       dispatch(requestUserData('getFollowing'))
-      getSocialNetworkPromise2(null, userId, "following", false, false, 1)
+      getSocialNetworkPromise(null, userId, "following", false, false, 1)
       .then(members => {
         dispatch(receiveAuthFollowing(members))
         return members
@@ -210,6 +210,43 @@ export function setUser(userId, userName, userImage, bio, website, isPublic) {
     aliasNames[userName] = userId
     database.child('alias_names').child(userName).set(userId)
     .then(z => console.log("seting alias names!!!!!!!!", z, aliasNames))
+}
+
+export function getProfilePromise(userId) {
+    const dbPaths = [
+      `users/${userId}`,
+      `posts/${userId}`,
+      `user_network/${userId}/following/total`,
+      `user_network/${userId}/followers/total`,
+    ]
+    return Promise.all(dbPaths.map(p => database.child(p).once('value')))
+    .then(data => {
+        const values = data.map(snap => snap.val()) 
+        const [
+            user, 
+            posts, 
+            following_total, 
+            followers_total
+        ] = values
+
+        for (const [index, value] of values.entries()) {
+            if (value !== 0 && !value) {
+                throw new Error(`${value} returned from database '${dbPaths[index]}'`)
+            }
+        }
+        const posts_total = Object.keys(posts).length
+        const profileData = {...user, posts_total, following_total, followers_total}
+        // console.log(`querying user ${userId} data!!!: `, profileData)
+        return profileData
+    })
+}
+
+export function getProfile(userId) {
+  return dispatch => {
+    getProfilePromise.then(data => {
+        dispatch(receiveUserData(userId, data, true))
+    })
+  }
 }
 
 

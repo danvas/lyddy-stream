@@ -25,7 +25,7 @@ class SocialButton extends Component {
 
   render() {
     const { authUser, socialItem } = this.props
-    console.log("SocialButton.RENDER()...", this.props)
+    // console.log("SocialButton.RENDER()...", this.props)
     return (
       <div>
         <button onClick={e => {this.doFollowAction(e)}}>{getFollowStatusName(socialItem.status)}</button>

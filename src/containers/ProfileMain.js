@@ -4,15 +4,14 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import Social from './Social';
 import SocialButton from './SocialButton'
-import { updateFollowing, getUserIdFromAlias, handleRequestError, isLoggedIn, getAuthUser, 
-  getUserDataFromAlias, fetchUserData, logOut, getFollowing } from '../actions/UserActions'
+import { getProfilePromise, getAuthUser, getUserDataFromAlias } from '../actions/UserActions'
 import { getMutualFollowPromise, getSocialItemPromise, getSocialItems, toggleFollowUser, followUser, unfollowUser, acceptFollower, removePendingRequest  } from '../actions/SocialActions'
 
 
 import _ from 'lodash'
 
 const ProfilePhoto = props => {
-  console.log("PROFILE PHOTO!!!!!!!!", props)
+  // console.log("PROFILE PHOTO!!!!!!!!", props)
   if (props.isAuthUser) {
     return (
       <div>
@@ -63,7 +62,7 @@ const MutualFollowersList = props => {
 const ProfilePage = props => {
   // console.log(props)
   const { userAlias, isAuthUser, social, socialButton, profilePhoto, authUser, mutualFollowers } = props
-  console.log(props)
+  // console.log(props)
   const fullName = "(full name here)"
   const profileDescription = "(some profile blurb here)"
   const aliasImage = "https://scontent-cdg2-1.cdninstagram.com/vp/65d9b73322d1606dc1dfebdbddea4c92/5C98EDCB/t51.2885-19/43604192_1503270776440181_4797495013846024192_n.jpg" // props.aliasImage
@@ -137,6 +136,7 @@ class Profile extends Component {
     const userId = aliasToId[match.params.user_alias]
     // acceptFollower("XWKhkvgF6bS5Knkg8cWT1YrJOFq1")
     // getSocialItemPromise(authUser.uid, "following").then(val=>console.log(val))
+    {userId && getProfilePromise(userId).then(profileData => console.log(`querying user ${userId} data!!!: `, profileData))}
   }
   componentDidMount() {
     // console.log("Profile.componentDidMOUNT()...")
@@ -168,7 +168,7 @@ class Profile extends Component {
 
   render() {
     const { match, authUser, aliasToId, social } = this.props
-    console.log("!!!!! Profile.RENDER.... social!", this.props.social)
+    // console.log("!!!!! Profile.RENDER.... social!", this.props.social)
     const aliasName = match.params['user_alias'] 
     const userAlias = match.params && match.params['user_alias']
     const isAuthUser = (authUser.alias_name === userAlias)
@@ -214,9 +214,7 @@ const mapDispatchToProps = (dispatch) => ({
   getMutualFollowers: userId => dispatch(getSocialItems(userId, "followers", true, false)),
   getUserDataFromAlias: aliasName => dispatch(getUserDataFromAlias(aliasName)),
   getUserCred: () => dispatch(getAuthUser()),
-  getFollowing: (userId) => dispatch(getFollowing(userId)),
-  toggleFollowAction: (userId, doFollow) => dispatch(toggleFollowUser(userId, doFollow)),
-  updateFollowing: (user, items, doFollow) => dispatch(updateFollowing(user, items, doFollow)),
+  toggleFollowAction: (userId, doFollow) => dispatch(toggleFollowUser(userId, doFollow))
 })
  
 export default connect(
