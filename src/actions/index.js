@@ -69,6 +69,7 @@ function fetchPosts(stream, userIds) {
     userIds.sort()
     const firstId = userIds[0]
     const lastId = userIds[userIds.length - 1]
+    // TODO: Remove this depenency on "orderByKey". It's breaking increment of "total" transaction! (see PostActions' savePost function)
     postsQuery = postsDatabase.orderByKey().startAt(firstId).endAt(lastId)
   }
  
@@ -103,7 +104,7 @@ function fetchPosts(stream, userIds) {
                         post = postSnap.val()
                         const shouldKeep = keepPost(userSnap.key, post)
                         if (shouldKeep) {
-                          const lyd = {...post, 'user_id': userSnap.key, 'lyd_id': postSnap.key}
+                          const lyd = {...post, 'lyd_id': postSnap.key}
                           posts.push(lyd)
                         }
                       })

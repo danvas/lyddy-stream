@@ -2,15 +2,9 @@ import React, { Component } from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import _ from 'lodash'
-import { updateFollowing, getUserIdFromAlias, handleRequestError, isLoggedIn, getAuthUser, 
-  getUserDataFromAlias, fetchUserData, logOut, getFollowing } from '../actions/UserActions'
-import { toggleFollowUser, followUser, unfollowUser, getSocialItems, acceptFollower, removePendingRequest } from '../actions/SocialActions'
-
-import { updateQueue } from '../actions/PlayerActions'
+import { getUserIdFromAlias, getAuthUser, getUserDataFromAlias, getFollowing } from '../actions/UserActions'
+import { performFollowAction, getSocialItems } from '../actions/SocialActions'
 import { SocialItemsList } from '../containers/SocialList'
-import Posts from '../components/Posts';
-import PostLydModal from '../components/PostLydModal';
-import { auth, usersDatabase, database }  from '../Firebase';
 
 class Social extends Component {
   constructor(props) {
@@ -57,22 +51,11 @@ class Social extends Component {
     return newState
   }
 
-  componentDidUpdate(prevProps) {
-    // console.log("Social.componentDidUPDATE()...")
-    // console.log(prevProps.user)
-    // console.log(this.props)
-    const { social, user, getFollowing } = this.props
-  }
-
   handleTestClick(e) {
     // console.log("Social.handleTestClick()...")
     e.preventDefault()
     // console.log(this.props) 
     const { getSocialNetwork, match, selectedUserId, user, getMutualNetwork } = this.props
-    // followUser('F7G80ZQ0QffjiWtHT51tU8ztHRq1')
-    // followUser('FAKE18j0iqfqffwhtqz10tgurz8t')
-    // followUser('XWKhkvgF6bS5Knkg8cWT1YrJOFq1')
-    // acceptFollower('XWKhkvgF6bS5Knkg8cWT1YrJOFq1')
     const { user_alias, social } = match.params
     const userId = user.aliasToId[user_alias]
     const net = match.params['social']
@@ -83,9 +66,7 @@ class Social extends Component {
 
   toggleFollow = (user, event) => {
     event.preventDefault()
-    let doFollow = user.status === 1? false : true
-    this.props.toggleFollowAction(user.user_id, doFollow)
-    this.props.updateFollowing(user, this.props.user.following, doFollow)
+    this.props.toggleFollowAction(user.user_id, user.status)
   }
 
 
@@ -117,13 +98,10 @@ function mapStateToProps(state) {
 const mapDispatchToProps = dispatch => ({
   getMutualNetwork: (userId, net) => dispatch(getSocialItems(userId, net, true, false)),
   getSocialNetwork: (userId, net, mutual, mutualOnly, statusLim) => dispatch(getSocialItems(userId, net, mutual, mutualOnly, statusLim)),
-  getUserData: userId => dispatch(fetchUserData(userId)),
   getUserDataFromAlias: aliasName => dispatch(getUserDataFromAlias(aliasName)),
   getUserIdFromAlias: aliasName => dispatch(getUserIdFromAlias(aliasName)),
   getUserCred: () => dispatch(getAuthUser()),
-  getFollowing: (userId) => dispatch(getFollowing(userId)),
-  toggleFollowAction: (userId, doFollow) => dispatch(toggleFollowUser(userId, doFollow)),
-  updateFollowing: (user, items, doFollow) => dispatch(updateFollowing(user, items, doFollow)),
+  toggleFollowAction: (userId, statusCode) => dispatch(performFollowAction(userId, statusCode)),
 })
 
 export default connect(mapStateToProps, mapDispatchToProps)(Social)

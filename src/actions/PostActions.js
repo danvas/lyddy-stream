@@ -20,7 +20,13 @@ export function pushToPlaylist(lydId, index, playlistId) {
 export function savePost(userId, values) {
     console.log(values)
     return dispatch => {
-        const newPostRef = postsDatabase.child(userId).push(values)
+        const newPostRef = postsDatabase.child(userId)
+        newPostRef.push(values,
+            // // TODO: Uncomment this increment after removing dependency on keys' ordering in fetchPosts action function.
+            // _ => newPostRef.child('total').transaction(currentValue => {
+            //     return currentValue + 1
+            // })
+        )    
         .catch(error=>console.log(error))
         dispatch(reset('NewPost'))
     }     

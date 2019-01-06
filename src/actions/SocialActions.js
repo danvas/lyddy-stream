@@ -6,7 +6,6 @@ export const REQUEST_SOCIALNETWORK = 'REQUEST_SOCIALNETWORK'
 export const RECEIVE_SOCIALNETWORK = 'RECEIVE_SOCIALNETWORK'
 export const UPDATE_SOCIALNETWORK_ITEM = 'UPDATE_SOCIALNETWORK_ITEM'
 export const HANDLE_SOCIAL_ERROR = 'HANDLE_SOCIAL_ERROR'
-export const SOCIAL_TOGGLE_FOLLOW = 'SOCIAL_TOGGLE_FOLLOW'
 const UNFOLLOW_CODE = 0
 const FOLLOW_REQUEST_CODE = 1
 const FOLLOW_CODE = 2
@@ -57,7 +56,9 @@ export function unfollowUserPromise(userId) {
     .then(() => {
       const unfollowedUsers = {}
       unfollowedUsers[userId] = {user_id: userId, status: UNFOLLOW_CODE}
-      followingRef.set(null, resolve(unfollowedUsers))
+      followingRef.set(null, _ => {
+        resolve(unfollowedUsers)
+      })
     })
     .catch(err=>{
       // console.log("UNFOLLOW didn't work!!!!!! ", err.code)
@@ -68,6 +69,34 @@ export function unfollowUserPromise(userId) {
     // console.log(newFollower)
     return mergeProfileDataPromise(unfollowed)
   })
+}
+
+function updateNetTotal(userId, network, amount) {
+  if (amount === 0) {
+    return null
+  }
+
+  const ref = database.child(`user_network/${userId}/${network}_total`)
+  ref.transaction(currentValue => {
+    const newValue = currentValue + amount
+    if (newValue < 0) {
+      return currentValue
+    } else {
+      return newValue
+    }
+  })
+}
+
+function incrementFollowTotal(userId) {
+  const authUserId = auth.currentUser && auth.currentUser.uid
+  updateNetTotal(userId, "followers", 1)
+  updateNetTotal(authUserId, "following", 1)  
+}
+
+function decrementFollowTotal(userId) {
+  const authUserId = auth.currentUser && auth.currentUser.uid
+  updateNetTotal(userId, "followers", -1)
+  updateNetTotal(authUserId, "following", -1)  
 }
 
 export function followUserPromise(userId) {
@@ -82,13 +111,16 @@ export function followUserPromise(userId) {
     const followersRef = database.child(`user_network/${userId}/followers/${authUserId}`)
     const followingRef = database.child(`user_network/${authUserId}/following/${userId}`)
     const newFollower = {}
-    let val = {'date_added': moment().format(), 'status': FOLLOW_CODE}
+    const val = {'date_added': moment().format(), 'status': FOLLOW_CODE}
 
     followersRef.set(val)
     .then(() => {
       newFollower[userId] = val
       console.log(newFollower)
-      followingRef.set(val, resolve(newFollower))
+      followingRef.set(val, _ => {
+          incrementFollowTotal(userId)
+          resolve(newFollower)
+        })
     })
     .catch(err=>{
       // console.log(err.code === "PERMISSION_DENIED", "pending request!...")
@@ -96,8 +128,9 @@ export function followUserPromise(userId) {
       followersRef.set(val)
       .then(() => {
         newFollower[userId] = val
-        console.log(newFollower)
-        followingRef.set(val, resolve(newFollower))
+        followingRef.set(val, _ => {
+          resolve(newFollower)
+        })
       })
       .catch((err) => { reject(err.message)})
     })
@@ -108,46 +141,27 @@ export function followUserPromise(userId) {
   })
 }
 
-export function performFollowAction(userId, doFollow) {
-  return (dispatch, getState) => {
-    
-    var toggledFollow 
-    if (doFollow) {
-      toggledFollow = followUserPromise(userId)  
+export function performFollowAction(userId, statusCode) {
+  return dispatch => {
+    var toggledFollow
+    if (statusCode === UNFOLLOW_CODE) {
+        toggledFollow = followUserPromise(userId)
+    } else if (statusCode === FOLLOW_REQUEST_CODE) {
+        toggledFollow = unfollowUserPromise(userId)
     } else {
-      toggledFollow = unfollowUserPromise(userId)
+        toggledFollow = unfollowUserPromise(userId)
+                        .then(followers => {
+                          decrementFollowTotal(userId)
+                          return followers
+                        })
     }
 
     toggledFollow
     .then(followers => {
       const socialItem = followers && followers[userId]
-      console.log(socialItem)
-      dispatch({type: SOCIAL_TOGGLE_FOLLOW, userId, toggledFollow: doFollow, success: true})
+      // console.log(socialItem)
       dispatch(updateAuthFollowing(userId, socialItem))
       dispatch(updateSocialNetworkItem(userId, socialItem))
-    }).catch(err => {
-      dispatch({type: SOCIAL_TOGGLE_FOLLOW, userId, success: false})
-    })
-  }
-}
-
-export const getFollowToggle = followStatus => !followStatus
-
-export function toggleFollowUser(userId, doFollow) {
-  return dispatch => {
-    dispatch(requestSocialNetwork(`toggleFollowUser('${userId}',${doFollow})`))
-    var toggledFollow 
-    if (doFollow) {
-      toggledFollow = followUserPromise(userId)  
-    } else {
-      toggledFollow = unfollowUserPromise(userId)
-    }
-
-    toggledFollow
-    .then(() => {
-      dispatch({type: SOCIAL_TOGGLE_FOLLOW, userId, toggledFollow: doFollow, success: true})
-    }).catch(err => {
-      dispatch({type: SOCIAL_TOGGLE_FOLLOW, userId, success: false})
     })
   }
 }
@@ -194,15 +208,11 @@ export function mergeProfileDataPromise(users) {
     usersDatabase.orderByKey().startAt(firstId).endAt(lastId)
     .once('value').then(snap => {
       let items = {}
-      var item
       snap.forEach(userSnap => {
         const profile = userSnap.val()
         const member = users[userSnap.key] || null
         if (member !== null) {
-          item = {...member, ...profile,
-            user_id: userSnap.key // TODO: Move this to intial user creation function
-          }
-          items[userSnap.key] = item
+          items[userSnap.key] = {...member, ...profile}
         }
       })
       resolve(items)
@@ -293,24 +303,44 @@ export function getSocialItems(userId, net, mutual=false, mutualOnly=false, stat
   }
 }
 
-export function acceptFollower(userId) {
-    const authUserId = auth.currentUser && auth.currentUser.uid
-    if (authUserId === undefined) {
-      // console.log("ERROR! Must be signed in to follow peeps!")
-      return
-    }
-    if (userId === authUserId) {
-      // console.log("ERROR! Cannot accept thyself.")
-      return
-    }
-    const ref = database.child(`user_network/${authUserId}/followers/${userId}`)
-    const followingRef = database.child(`user_network/${userId}/following/${authUserId}`)
-    const val = {'date_added': moment().format(), 'status': FOLLOW_CODE}
-    ref.update(val, () => {
-        // console.log(`accepted follower '${userId}'!!`)
-        followingRef.set(val)
+export function acceptFollowRequest(userId) {
+    updateFollowStatus(userId, FOLLOW_CODE)
+    .then(newFollower => {
+      console.log("accepting follower!!!", newFollower)
     })
-    .catch(error=>console.log(error))
+}
+
+export function rejectFollowRequest(userId) {
+    updateFollowStatus(userId, UNFOLLOW_CODE)
+    .then(newFollower => {
+      console.log("rejecting follower!!!", newFollower)
+    })
+    .catch(err => console.log(err))
+}
+
+function updateFollowStatus(userId, statusCode) {
+  return new Promise((resolve, reject) => {
+    const authUserId = auth.currentUser && auth.currentUser.uid
+    const updateTotals = () => {
+      const amount = (FOLLOW_CODE === statusCode)? 1 : 0
+      updateNetTotal(authUserId, "followers", amount)
+      updateNetTotal(userId, "following", amount)  
+    }
+
+    const val = {'date_added': moment().format(), 'status': statusCode}
+    const dbVal = (statusCode === UNFOLLOW_CODE)? null : val
+    const updatedValues = {}
+    updatedValues[`user_network/${authUserId}/followers/${userId}`] = dbVal
+    updatedValues[`user_network/${userId}/following/${authUserId}`] = dbVal
+
+    database.update(updatedValues, updateTotals)
+    .then(_ => {
+      const newFollower = {}
+      newFollower[userId] = {...val, user_id: userId}
+      resolve(newFollower)
+    })
+    .catch(err => reject(new Error(err.message)))
+  })
 }
 
 

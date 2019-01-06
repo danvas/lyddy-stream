@@ -2,7 +2,7 @@ import React, { Component } from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import _ from 'lodash'
-import { getFollowToggle, performFollowAction, getFollowStatusName } from '../actions/SocialActions'
+import { performFollowAction, getFollowStatusName } from '../actions/SocialActions'
 
 const FollowButton = props => {
   return 
@@ -18,9 +18,8 @@ class SocialButton extends Component {
   doFollowAction(event) {
     event.preventDefault()
     const { socialItem, dispatchFollowUser } = this.props
-    const doFollow = getFollowToggle(socialItem.status)
-    console.log(socialItem, doFollow)
-    dispatchFollowUser(socialItem.user_id, doFollow)
+    console.log(socialItem)
+    dispatchFollowUser(socialItem.user_id, socialItem.status || 0)
   }
 
   render() {
@@ -40,7 +39,7 @@ function mapStateToProps(state) {
 }
 
 const mapDispatchToProps = dispatch => ({
-  dispatchFollowUser: (userItem, doFollow) => dispatch(performFollowAction(userItem, doFollow))
+  dispatchFollowUser: (userId, statusCode) => dispatch(performFollowAction(userId, statusCode))
 })
 
 export default connect(mapStateToProps, mapDispatchToProps)(SocialButton)

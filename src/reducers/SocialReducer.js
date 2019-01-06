@@ -9,7 +9,6 @@ import {
   RECEIVE_SOCIALNETWORK,
   UPDATE_SOCIALNETWORK_ITEM,
   HANDLE_SOCIAL_ERROR,
-  SOCIAL_TOGGLE_FOLLOW
 } from '../actions/SocialActions'
 
 const defState = {
@@ -54,14 +53,6 @@ export default function(state=defState, action) {
       return {...state,
         lastUpdated: action.receivedAt,
         items,
-      }
-    case SOCIAL_TOGGLE_FOLLOW:
-      return {...state, 
-        userId: action.userId, 
-        success: action.success, 
-        toggledFollow: action.toggledFollow,
-        userNetworkDbCallStack,
-        isFetching
       }
     default:
       return state

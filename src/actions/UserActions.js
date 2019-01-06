@@ -102,6 +102,18 @@ export function setupAuthUser() {
     const userRef = usersDatabase.child(userId);
     return dispatch => {
         dispatch(requestUserData('setupAuthUser'))
+        //// TODO: Use getProfilePromise instead!
+        // getProfilePromise
+        // .then(data => {
+        //     dispatch(receiveUserData(userId, data, true))
+        //     dispatch(getFollowing(userId))
+        // })
+        // .catch(error => {
+        //     const message = `LyddyError: Could not find user ${userId}`
+        //     const error = {code: 'USERID_NOT_FOUND', param: userId, message}
+        //     dispatch(handleRequestError(error))  
+        // })
+
         userRef.once('value').then(
             snap => {
                 const userVal = snap.val()
@@ -110,8 +122,7 @@ export function setupAuthUser() {
                     const error = {code: 'USERID_NOT_FOUND', param: userId, message}
                     dispatch(handleRequestError(error))  
                 } else {
-                    const {playlists, ...userData} = userVal
-                    dispatch(receiveUserData(userId, userData, true))
+                    dispatch(receiveUserData(userId, userVal, true))
                     dispatch(getFollowing(userId))
                 }
             },
@@ -197,12 +208,14 @@ export function createAccount(email, password) {
 export function setUser(userId, userName, userImage, bio, website, isPublic) {
     console.log(userId, userName, bio, website, isPublic)
     const userData = {
+        user_id: userId,
         alias_name: userName,
         alias_image: userImage,
         bio: bio,
         website: website,
         public: isPublic
     }
+
     const userRef = usersDatabase.child(`${userId}`)
     // let newJobRef = userRef.push();
     userRef.set(userData);
@@ -216,8 +229,8 @@ export function getProfilePromise(userId) {
     const dbPaths = [
       `users/${userId}`,
       `posts/${userId}`,
-      `user_network/${userId}/following/total`,
-      `user_network/${userId}/followers/total`,
+      `user_network/${userId}/following_total`,
+      `user_network/${userId}/followers_total`,
     ]
     return Promise.all(dbPaths.map(p => database.child(p).once('value')))
     .then(data => {

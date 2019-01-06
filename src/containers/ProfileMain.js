@@ -5,10 +5,14 @@ import { connect } from 'react-redux'
 import Social from './Social';
 import SocialButton from './SocialButton'
 import { getProfilePromise, getAuthUser, getUserDataFromAlias } from '../actions/UserActions'
-import { getMutualFollowPromise, getSocialItemPromise, getSocialItems, toggleFollowUser, followUser, unfollowUser, acceptFollower, removePendingRequest  } from '../actions/SocialActions'
+import { getSocialItems } from '../actions/SocialActions'
 
 
 import _ from 'lodash'
+
+const ProfileHeader = props => {
+  return <div><a href="/">home</a></div>
+}
 
 const ProfilePhoto = props => {
   // console.log("PROFILE PHOTO!!!!!!!!", props)
@@ -101,7 +105,7 @@ const ProfilePage = props => {
         <div>
             <span>
               <div></div>
-              <Link to={`/${userAlias}/`}>Posts</Link>
+              <Link to={`/${userAlias}`}>Posts</Link>
             </span>
             <span>
               <div></div>
@@ -130,13 +134,15 @@ class Profile extends Component {
   handleTestClick(e) {
     const { match, authUser, aliasToId, getMutualFollowers } = this.props
     // console.log("Profile.handleTestClick()...")
+    console.log(e)
     e.preventDefault()
     // console.log(this.props) 
     // getMutualFollow(authUser.uid, 'F7G80ZQ0QffjiWtHT51tU8ztHRq1')
     const userId = aliasToId[match.params.user_alias]
-    // acceptFollower("XWKhkvgF6bS5Knkg8cWT1YrJOFq1")
+    // rejectFollowRequest(userId) 
+    // acceptFollowRequest(userId)
     // getSocialItemPromise(authUser.uid, "following").then(val=>console.log(val))
-    {userId && getProfilePromise(userId).then(profileData => console.log(`querying user ${userId} data!!!: `, profileData))}
+    // {userId && getProfilePromise(userId).then(profileData => console.log(`querying user ${userId} data!!!: `, profileData))}
   }
   componentDidMount() {
     // console.log("Profile.componentDidMOUNT()...")
@@ -179,16 +185,22 @@ class Profile extends Component {
     profileProps['mutualFollowers'] = mutualFollowers
     profileProps['followersTotal'] = socialItems.length
     if (social.isFetching || !(userAlias.toLowerCase() in aliasToId)) {
-      return <div>Loading...</div>
+      return (
+        <div>
+        <ProfileHeader />
+        <div>Loading...</div>
+        </div>
+      )
     } else {
       const userId = aliasToId[userAlias]
       const socialItem = (authUser.following && authUser.following[userId]) || {user_id: userId} //FIXME: This should be initialized with full user data! (Currently, data appears only when authed user is already following or after toggling the follow button.)
-      console.log(socialItem)
+      // console.log(socialItem)
       const socialButton = (authUser.following && <SocialButton socialItem={socialItem} />)
       const profilePhoto = <ProfilePhoto src={socialItem.alias_image} userAlias={userAlias} isAuthUser={isAuthUser} />
       return (
           <div>
-            {true && <p><a href="#" onClick={this.handleTestClick}>Test!</a></p>}
+            {false && <p><a href="#" onClick={this.handleTestClick}>Test!</a></p>}
+            <ProfileHeader />
             <ProfilePage 
               socialButton={socialButton}
               profilePhoto={profilePhoto}
@@ -214,7 +226,6 @@ const mapDispatchToProps = (dispatch) => ({
   getMutualFollowers: userId => dispatch(getSocialItems(userId, "followers", true, false)),
   getUserDataFromAlias: aliasName => dispatch(getUserDataFromAlias(aliasName)),
   getUserCred: () => dispatch(getAuthUser()),
-  toggleFollowAction: (userId, doFollow) => dispatch(toggleFollowUser(userId, doFollow))
 })
  
 export default connect(
