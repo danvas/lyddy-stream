@@ -67,12 +67,11 @@ const ProfilePage = props => {
   // console.log(props)
   const { userAlias, isAuthUser, social, socialButton, profilePhoto, authUser, mutualFollowers } = props
   // console.log(props)
-  const fullName = "(full name here)"
-  const profileDescription = "(some profile blurb here)"
-  const aliasImage = "https://scontent-cdg2-1.cdninstagram.com/vp/65d9b73322d1606dc1dfebdbddea4c92/5C98EDCB/t51.2885-19/43604192_1503270776440181_4797495013846024192_n.jpg" // props.aliasImage
-  const postsTotal = 344// props.postsTotal
-  const followersTotal = props.followersTotal
-  const followingTotal = 454// props.followingTotal
+  const fullName = props.full_name
+  const profileDescription = props.bio
+  const postsTotal = props.posts_total
+  const followersTotal = props.followers_total
+  const followingTotal = props.following_total
   const unavailable = false // props.error.code === 'USER_NOT_FOUND'
   // const isAuthUser = true // user.uid
 
@@ -141,7 +140,7 @@ class Profile extends Component {
     const userId = aliasToId[match.params.user_alias]
     // rejectFollowRequest(userId) 
     // acceptFollowRequest(userId)
-    // getSocialItemPromise(authUser.uid, "following").then(val=>console.log(val))
+    getProfilePromise(userId).then(val=>console.log(val))
     // {userId && getProfilePromise(userId).then(profileData => console.log(`querying user ${userId} data!!!: `, profileData))}
   }
   componentDidMount() {
@@ -160,12 +159,13 @@ class Profile extends Component {
 
   static getDerivedStateFromProps(nextProps, prevState){
     const { match, aliasToId, authUser, getMutualFollowers, social } = nextProps
-    // console.log(nextProps)
+    console.log(nextProps)
     const userAlias = match.params['user_alias']
     if (authUser.loggedIn && !social.isFetching && (social.items.length < 1)) {
-      if (aliasToId[userAlias]) {
+      const userId = aliasToId[userAlias]
+      if (userId) {
         console.log("GETTING MUTUAL FOLLOWERS!!!!!!!!!!")
-        getMutualFollowers(aliasToId[userAlias])
+        getMutualFollowers(userId)
       }
     }
 
@@ -173,17 +173,22 @@ class Profile extends Component {
   }
 
   render() {
-    const { match, authUser, aliasToId, social } = this.props
+    const { match, authUser, aliasToId, social, profiles } = this.props
     // console.log("!!!!! Profile.RENDER.... social!", this.props.social)
     const aliasName = match.params['user_alias'] 
     const userAlias = match.params && match.params['user_alias']
+    const userId = aliasToId[userAlias]
     const isAuthUser = (authUser.alias_name === userAlias)
-    const profileProps = {userAlias, isAuthUser}
+
+    let profileProps = {userAlias, isAuthUser}
+    const profile = profiles[userId]
+    if (profile) {
+      profileProps = {userAlias, isAuthUser, ...profile}
+    }
     const socialItems = Object.values(social.items)
     const mutualFollowers = socialItems.filter(item => item.alias_name !== authUser.alias_name)
     // console.log(socialItems)
     profileProps['mutualFollowers'] = mutualFollowers
-    profileProps['followersTotal'] = socialItems.length
     if (social.isFetching || !(userAlias.toLowerCase() in aliasToId)) {
       return (
         <div>
@@ -192,14 +197,13 @@ class Profile extends Component {
         </div>
       )
     } else {
-      const userId = aliasToId[userAlias]
       const socialItem = (authUser.following && authUser.following[userId]) || {user_id: userId} //FIXME: This should be initialized with full user data! (Currently, data appears only when authed user is already following or after toggling the follow button.)
       // console.log(socialItem)
       const socialButton = (authUser.following && <SocialButton socialItem={socialItem} />)
       const profilePhoto = <ProfilePhoto src={socialItem.alias_image} userAlias={userAlias} isAuthUser={isAuthUser} />
       return (
           <div>
-            {false && <p><a href="#" onClick={this.handleTestClick}>Test!</a></p>}
+            {true && <p><a href="#" onClick={this.handleTestClick}>Test!</a></p>}
             <ProfileHeader />
             <ProfilePage 
               socialButton={socialButton}

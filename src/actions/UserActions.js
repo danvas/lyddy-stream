@@ -232,32 +232,35 @@ export function getProfilePromise(userId) {
       `user_network/${userId}/following_total`,
       `user_network/${userId}/followers_total`,
     ]
-    return Promise.all(dbPaths.map(p => database.child(p).once('value')))
-    .then(data => {
-        const values = data.map(snap => snap.val()) 
-        const [
-            user, 
-            posts, 
-            following_total, 
-            followers_total
-        ] = values
+    const promises = dbPaths.map(p => database.child(p).once('value')) //TODO: Turn this into "on" for dynamic updating OR add listener.
+    return Promise.all(promises).then(data => {
+            const values = data.map(snap => snap.val()) 
+            const [
+                user, 
+                posts, 
+                following_total, 
+                followers_total
+            ] = values
 
-        for (const [index, value] of values.entries()) {
-            if (value !== 0 && !value) {
-                throw new Error(`${value} returned from database '${dbPaths[index]}'`)
+            for (const [index, value] of values.entries()) {
+                if (value !== 0 && !value) {
+                    throw new Error(`${value} returned from database '${dbPaths[index]}'`)
+                }
             }
-        }
-        const posts_total = Object.keys(posts).length
-        const profileData = {...user, posts_total, following_total, followers_total}
-        // console.log(`querying user ${userId} data!!!: `, profileData)
-        return profileData
-    })
+            const posts_total = Object.keys(posts).length
+            const profileData = {...user, posts_total, following_total, followers_total}
+            // console.log(`querying user ${userId} data!!!: `, profileData)
+            return profileData
+           })
 }
 
 export function getProfile(userId) {
   return dispatch => {
-    getProfilePromise.then(data => {
-        dispatch(receiveUserData(userId, data, true))
+    dispatch(requestUserData('getProfile'))
+    getProfilePromise(userId)
+    .then(userData => {
+        const isAuthUser = (auth.currentUser && (userId === auth.currentUser.uid)) || false
+        dispatch(receiveUserData(userId, userData, isAuthUser))
     })
   }
 }
@@ -345,7 +348,7 @@ export function getUserDataFromAlias(aliasName) {
                 let aliasToId = {}
                 aliasToId[aliasName] = userId
                 dispatch(receiveAliasMaps(aliasToId))
-                dispatch(fetchUserData(userId))
+                dispatch(getProfile(userId))
             }
         }, error => console.log(error))
     }
