@@ -135,7 +135,7 @@ export function setupAuthUser() {
 
 export function getFollowing(userId) {
     return dispatch => {
-      dispatch(requestUserData('getFollowing'))
+      dispatch(requestUserData(`getFollowing('${userId}')`))
       getSocialNetworkPromise(null, userId, "following", false, false, 1)
       .then(members => {
         dispatch(receiveAuthFollowing(members))
@@ -165,7 +165,7 @@ function requestUserData(item) {
   }
 }
 
-function receiveUserData(userId, userData, isAuthUser=false) {
+export function receiveUserData(userId, userData, isAuthUser=false) {
   return {
     type: RECEIVE_USER_DATA,
     userId,
@@ -229,29 +229,29 @@ export function getProfilePromise(userId) {
     const dbPaths = [
       `users/${userId}`,
       `posts/${userId}`,
-      `user_network/${userId}/following_total`,
-      `user_network/${userId}/followers_total`,
+      `user_network/${userId}/following`,
+      `user_network/${userId}/followers`,
     ]
     const promises = dbPaths.map(p => database.child(p).once('value')) //TODO: Turn this into "on" for dynamic updating OR add listener.
     return Promise.all(promises).then(data => {
-            const values = data.map(snap => snap.val()) 
-            const [
-                user, 
-                posts, 
-                following_total, 
-                followers_total
-            ] = values
+        const values = data.map(snap => snap.val()) 
+        let [
+            user, 
+            posts, 
+            following, 
+            followers
+        ] = values
+        following = following || []
+        followers = followers || []
+        posts = posts || []
 
-            for (const [index, value] of values.entries()) {
-                if (value !== 0 && !value) {
-                    throw new Error(`${value} returned from database '${dbPaths[index]}'`)
-                }
-            }
-            const posts_total = Object.keys(posts).length
-            const profileData = {...user, posts_total, following_total, followers_total}
-            // console.log(`querying user ${userId} data!!!: `, profileData)
-            return profileData
-           })
+        const following_total = Object.keys(following).length
+        const followers_total = Object.keys(followers).length
+        const posts_total = Object.keys(posts).length
+        const profileData = {...user, posts_total, following_total, followers_total}
+        // console.log(`querying user ${userId} data!!!: `, profileData)
+        return profileData
+       })
 }
 
 export function getProfile(userId) {
@@ -264,7 +264,6 @@ export function getProfile(userId) {
     })
   }
 }
-
 
 export function getAliasFromProfiles(userIds) {
     var aliasNamesRef

@@ -1,5 +1,5 @@
 import { auth, usersDatabase, database } from '../Firebase';
-import { updateAuthFollowing } from '../actions/UserActions'
+import { updateAuthFollowing, receiveUserData, getProfilePromise } from '../actions/UserActions'
 import _ from 'lodash'
 
 export const REQUEST_SOCIALNETWORK = 'REQUEST_SOCIALNETWORK'
@@ -47,27 +47,25 @@ export function updateSocialNetworkItem(userId, item) {
   }
 }
 
+const isAuthenticated = userId => (auth.currentUser && (userId === auth.currentUser.uid)) || false
+
 export function unfollowUserPromise(userId) {
   const authUserId = auth && auth.currentUser.uid
-  return new Promise((resolve, reject) => {
-    const followersRef = database.child(`user_network/${userId}/followers/${authUserId}`)
-    const followingRef = database.child(`user_network/${authUserId}/following/${userId}`)
-    followersRef.set(null)
-    .then(() => {
-      const unfollowedUsers = {}
-      unfollowedUsers[userId] = {user_id: userId, status: UNFOLLOW_CODE}
-      followingRef.set(null, _ => {
-        resolve(unfollowedUsers)
-      })
-    })
-    .catch(err=>{
-      // console.log("UNFOLLOW didn't work!!!!!! ", err.code)
-      reject(err.message)
-    })     
-  })
-    .then(unfollowed => {
-    // console.log(newFollower)
-    return mergeProfileDataPromise(unfollowed)
+  const dbPaths = [
+    `user_network/${userId}/followers/${authUserId}`,
+    `user_network/${authUserId}/following/${userId}`,
+    `user_network/${userId}/followers_pending/${authUserId}`,
+    `user_network/${authUserId}/following_pending/${userId}`,
+  ]
+  const unfollowedUser = {}
+  unfollowedUser[userId] = {'date_added': moment().format(), status: UNFOLLOW_CODE}
+  const promises = dbPaths.map(p => database.child(p).remove())
+  promises.push(mergeProfileDataPromise(unfollowedUser))
+  
+  return Promise.all(promises).then(data => {
+    const idx = data.length-1
+    console.log(data[idx])
+    return data[idx]
   })
 }
 
@@ -78,7 +76,9 @@ function updateNetTotal(userId, network, amount) {
 
   const ref = database.child(`user_network/${userId}/${network}_total`)
   ref.transaction(currentValue => {
-    const newValue = currentValue + amount
+    console.log(userId, network, amount)
+    const newValue = (currentValue || 0) + amount
+    console.log(currentValue || 0, newValue)
     if (newValue < 0) {
       return currentValue
     } else {
@@ -110,25 +110,26 @@ export function followUserPromise(userId) {
 
     const followersRef = database.child(`user_network/${userId}/followers/${authUserId}`)
     const followingRef = database.child(`user_network/${authUserId}/following/${userId}`)
-    const newFollower = {}
-    const val = {'date_added': moment().format(), 'status': FOLLOW_CODE}
+    const followersPendingRef = database.child(`user_network/${userId}/followers_pending/${authUserId}`)
+    const followingPendingRef = database.child(`user_network/${authUserId}/following_pending/${userId}`)
 
-    followersRef.set(val)
+    const value = {'date_added': moment().format(), 'status': FOLLOW_CODE}
+    const newFollower = {}
+    newFollower[userId] = value
+    followersRef.set(value)
     .then(() => {
-      newFollower[userId] = val
-      console.log(newFollower)
-      followingRef.set(val, _ => {
-          incrementFollowTotal(userId)
+      followingRef.set(value, _ => {
+          console.log(newFollower)
           resolve(newFollower)
         })
     })
     .catch(err=>{
       // console.log(err.code === "PERMISSION_DENIED", "pending request!...")
-      val['status'] = FOLLOW_REQUEST_CODE
-      followersRef.set(val)
+      value['status'] = FOLLOW_REQUEST_CODE
+      followersPendingRef.set(value)
       .then(() => {
-        newFollower[userId] = val
-        followingRef.set(val, _ => {
+        followingPendingRef.set(value, _ => {
+          console.log(newFollower)
           resolve(newFollower)
         })
       })
@@ -136,33 +137,37 @@ export function followUserPromise(userId) {
     })
   })
   .then(newFollower => {
-    // console.log(newFollower)
+    console.log(newFollower)
     return mergeProfileDataPromise(newFollower)
   })
 }
 
 export function performFollowAction(userId, statusCode) {
   return dispatch => {
+    console.log("performing un/follow with code:", statusCode)
     var toggledFollow
     if (statusCode === UNFOLLOW_CODE) {
         toggledFollow = followUserPromise(userId)
-    } else if (statusCode === FOLLOW_REQUEST_CODE) {
-        toggledFollow = unfollowUserPromise(userId)
     } else {
         toggledFollow = unfollowUserPromise(userId)
-                        .then(followers => {
-                          decrementFollowTotal(userId)
-                          return followers
-                        })
     }
 
     toggledFollow
     .then(followers => {
-      const socialItem = followers && followers[userId]
-      // console.log(socialItem)
-      dispatch(updateAuthFollowing(userId, socialItem))
-      dispatch(updateSocialNetworkItem(userId, socialItem))
+      const userData = followers && followers[userId]
+      dispatch(updateStoredUserData(userData))
     })
+    .catch(err => console.log(err))
+  }
+}
+
+function updateStoredUserData(data) {
+  return dispatch => {
+    const userId = data['user_id']
+    dispatch(updateAuthFollowing(userId, data))
+    const isAuthUser = isAuthenticated(userId)
+    dispatch(receiveUserData(userId, data, isAuthUser))
+    dispatch(updateSocialNetworkItem(userId, data))
   }
 }
 
@@ -197,30 +202,19 @@ export const getReverseFollowVerb = followStatus => {
 }
 
 export function mergeProfileDataPromise(users) {
-  return new Promise((resolve, reject) => {
-    let userIds = Object.keys(users)
-    if (userIds.length === 0) {
-      resolve(users)
-    }
-    userIds.sort()
-    const firstId = userIds[0]
-    const lastId = userIds[userIds.length - 1]
-    usersDatabase.orderByKey().startAt(firstId).endAt(lastId)
-    .once('value').then(snap => {
-      let items = {}
-      snap.forEach(userSnap => {
-        const profile = userSnap.val()
-        const member = users[userSnap.key] || null
-        if (member !== null) {
-          items[userSnap.key] = {...member, ...profile}
-        }
-      })
-      resolve(items)
+  const userIds = Object.keys(users)
+  const promises = userIds.map(userId => getProfilePromise(userId))
+
+  const promise = Promise.all(promises).then(userDatas => {
+    const usersMergedData = {}
+    userDatas.forEach(userData => {
+      const userId = userData['user_id']
+      usersMergedData[userId] = {...userData, ...users[userId]}
     })
-    .catch(dbError => {
-      reject(new Error(dbError.message))
-    })
+    return usersMergedData 
   })
+
+  return promise
 }
 
 export function getSocialItemPromise(userId, net) {
@@ -238,20 +232,24 @@ export function getSocialItemPromise(userId, net) {
   })
 }
 
+// TODO: Refactor this -- it's horribly written.
 export function getSocialNetworkPromise(authUserId, userId, net, 
   mutual=false, mutualOnly=false, statusLimit=FOLLOW_CODE) {
   return new Promise((resolve, reject) => {
-    database.child(`user_network/${userId}/${net}`)
-    .once('value').then(snap => {
-      let members = snap.val() || {}
-      // console.log(members)
+    let oncePromises = [database.child(`user_network/${userId}/${net}`).once('value')]
+    if (statusLimit >= FOLLOW_REQUEST_CODE) {
+      oncePromises.push(database.child(`user_network/${userId}/${net}_pending`).once('value'))
+    }
+    
+    Promise.all(oncePromises)
+    .then(snaps => {
+      let members = {}
+      snaps.forEach(snap => members = {...members, ...snap.val()})
       members = _.pickBy(members, (value, key) => value.status >= statusLimit)
-      // console.log(members)
       return members
     })
     .then(members => {
       if (!mutual) {
-        // console.log("$$$$ FORGET MUTUALS!", members)
         resolve(members)
       } else {
         if (!authUserId) {
@@ -303,44 +301,58 @@ export function getSocialItems(userId, net, mutual=false, mutualOnly=false, stat
   }
 }
 
-export function acceptFollowRequest(userId) {
-    updateFollowStatus(userId, FOLLOW_CODE)
-    .then(newFollower => {
-      console.log("accepting follower!!!", newFollower)
-    })
-}
-
-export function rejectFollowRequest(userId) {
-    updateFollowStatus(userId, UNFOLLOW_CODE)
-    .then(newFollower => {
-      console.log("rejecting follower!!!", newFollower)
-    })
-    .catch(err => console.log(err))
-}
-
-function updateFollowStatus(userId, statusCode) {
-  return new Promise((resolve, reject) => {
-    const authUserId = auth.currentUser && auth.currentUser.uid
-    const updateTotals = () => {
-      const amount = (FOLLOW_CODE === statusCode)? 1 : 0
-      updateNetTotal(authUserId, "followers", amount)
-      updateNetTotal(userId, "following", amount)  
+export function respondFollowRequest(userId, isAccepted) {
+  return dispatch => {
+    var followResponse
+    if (isAccepted) {
+      followResponse = acceptFollowRequestPromise(userId)
+    } else {
+      followResponse = rejectFollowRequestPromise(userId)
     }
 
-    const val = {'date_added': moment().format(), 'status': statusCode}
-    const dbVal = (statusCode === UNFOLLOW_CODE)? null : val
-    const updatedValues = {}
-    updatedValues[`user_network/${authUserId}/followers/${userId}`] = dbVal
-    updatedValues[`user_network/${userId}/following/${authUserId}`] = dbVal
-
-    database.update(updatedValues, updateTotals)
-    .then(_ => {
-      const newFollower = {}
-      newFollower[userId] = {...val, user_id: userId}
-      resolve(newFollower)
+    followResponse.then(acceptedFollower => {
+      dispatch(updateStoredUserData(acceptedFollower[userId]))
     })
-    .catch(err => reject(new Error(err.message)))
+  }
+}
+
+export function acceptFollowRequestPromise(userId) {
+  const authUserId = auth.currentUser && auth.currentUser.uid
+  const val = {'date_added': moment().format(), 'status': FOLLOW_CODE}
+  const followersPath = `user_network/${authUserId}/followers/${userId}`
+  const followingPath = `user_network/${userId}/following/${authUserId}`
+  const followersPendingPath = `user_network/${authUserId}/followers_pending/${userId}`
+  const followingPendingPath = `user_network/${userId}/following_pending/${authUserId}`
+  
+  const updatedValues = {}
+  updatedValues[followersPath] = val
+  updatedValues[followingPath] = val
+  updatedValues[followersPendingPath] = null
+  updatedValues[followingPendingPath] = null
+  
+  console.log("**** accepting request!:", updatedValues)
+  return database.update(updatedValues).then(_ => {
+    const newFollower = {}
+    newFollower[userId] = {...val, user_id: userId}
+    return mergeProfileDataPromise(newFollower)
   })
 }
 
-
+export function rejectFollowRequestPromise(userId) {
+  const authUserId = auth.currentUser && auth.currentUser.uid
+  const val = {'date_added': moment().format(), 'status': UNFOLLOW_CODE}
+  const dbPaths = [
+    `user_network/${authUserId}/followers/${userId}`,
+    `user_network/${userId}/following/${authUserId}`,
+    `user_network/${authUserId}/followers_pending/${userId}`,
+    `user_network/${userId}/following_pending/${authUserId}`,
+  ]
+  const promises = dbPaths.map(p => database.child(p).remove())
+  return Promise.all(promises).then(data => {
+    console.log("**** rejecting user!:", userId, dbPaths)
+    console.log(data)
+    const rejectedFollower = {}
+    rejectedFollower[userId] = {...val, user_id: userId}
+    return mergeProfileDataPromise(rejectedFollower)
+  })
+}

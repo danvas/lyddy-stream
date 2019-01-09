@@ -4,21 +4,12 @@ import { connect } from 'react-redux'
 import _ from 'lodash'
 import { performFollowAction, getFollowStatusName } from '../actions/SocialActions'
 
-const FollowButton = props => {
-  return 
-  (
-    <div>
-      <button onClick={props.doFollowAction}>{props.actioName}</button>
-    </div>
-  )
-}
-
 class SocialButton extends Component {
 
   doFollowAction(event) {
     event.preventDefault()
     const { socialItem, dispatchFollowUser } = this.props
-    console.log(socialItem)
+    // console.log(socialItem)
     dispatchFollowUser(socialItem.user_id, socialItem.status || 0)
   }
 

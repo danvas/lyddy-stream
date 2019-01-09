@@ -5,7 +5,7 @@ import { connect } from 'react-redux'
 import Social from './Social';
 import SocialButton from './SocialButton'
 import { getProfilePromise, getAuthUser, getUserDataFromAlias } from '../actions/UserActions'
-import { getSocialItems } from '../actions/SocialActions'
+import { respondFollowRequest, getSocialItems } from '../actions/SocialActions'
 
 
 import _ from 'lodash'
@@ -29,7 +29,7 @@ const ProfilePhoto = props => {
     return (
       <div>
         <div role="button">
-          <span role="link"><img src={props.src} alt={`${props.userAlias}'s profile picture`} width="72" height="72"/></span>
+          <span role="link"><img src={props.src} alt={`${props.aliasName}'s profile picture`} width="72" height="72"/></span>
         </div>
       </div>
     )
@@ -65,16 +65,20 @@ const MutualFollowersList = props => {
 
 const ProfilePage = props => {
   // console.log(props)
-  const { userAlias, isAuthUser, social, socialButton, profilePhoto, authUser, mutualFollowers } = props
-  // console.log(props)
-  const fullName = props.full_name
-  const profileDescription = props.bio
-  const postsTotal = props.posts_total
-  const followersTotal = props.followers_total
-  const followingTotal = props.following_total
+  const {
+    isAuthUser,
+    aliasName,
+    aliasImage,
+    fullName,
+    bio,
+    postsTotal,
+    followersTotal,
+    followingTotal, 
+    socialButton, 
+    mutualFollowers } = props
+
   const unavailable = false // props.error.code === 'USER_NOT_FOUND'
   // const isAuthUser = true // user.uid
-
   if (unavailable) {
     return (
       <div><h2>Sorry, this page isn't available.</h2><p>The link you followed may be broken, or the page may have been removed. Go back to <a href='/'>homepage</a>.</p></div>
@@ -84,35 +88,35 @@ const ProfilePage = props => {
     <main>
       <div>
         <header>
-          {profilePhoto}
+          <ProfilePhoto src={aliasImage} aliasName={aliasName} isAuthUser={isAuthUser} />
           <section>
             <div>
-              <h1 title={userAlias}>{userAlias}</h1>
+              <h1 title={aliasName}>{aliasName}</h1>
               {isAuthUser && <div><a href="/accounts/edit/"><button type="button">Edit Profile</button></a></div>}
               {!isAuthUser && socialButton}
             </div>
             <div>
               <span><span>{postsTotal}</span> posts </span>
-              <span><a href={`/${userAlias}/followers/`}><span title={followersTotal}>{followersTotal}</span> follower{followersTotal === 1? '' : 's'} </a></span>
-              <span><a href={`/${userAlias}/following/`}><span>{followingTotal}</span> following</a></span>
+              <span><a href={`/${aliasName}/followers/`}><span title={followersTotal}>{followersTotal}</span> follower{followersTotal === 1? '' : 's'} </a></span>
+              <span><a href={`/${aliasName}/following/`}><span>{followingTotal}</span> following</a></span>
             </div>
             <h1>{fullName}</h1>
-            <div><span>{profileDescription}</span> </div>
-            {!isAuthUser && <a href={`/${userAlias}/followers`}><MutualFollowersList socialItems={mutualFollowers}/></a>}
+            <div><span>{bio}</span> </div>
+            {!isAuthUser && <a href={`/${aliasName}/followers`}><MutualFollowersList socialItems={mutualFollowers}/></a>}
           </section>
         </header>
         <div>
             <span>
               <div></div>
-              <Link to={`/${userAlias}`}>Posts</Link>
+              <Link to={`/${aliasName}`}>Posts</Link>
             </span>
             <span>
               <div></div>
-              <Link to={`/${userAlias}/saved`}>Saved</Link>
+              <Link to={`/${aliasName}/saved`}>Saved</Link>
             </span>
             <span>
               <div></div>
-              <Link to={`/${userAlias}/tagged`}>Tagged</Link>
+              <Link to={`/${aliasName}/tagged`}>Tagged</Link>
             </span>
         </div>
 
@@ -131,16 +135,14 @@ class Profile extends Component {
   }
 
   handleTestClick(e) {
-    const { match, authUser, aliasToId, getMutualFollowers } = this.props
+    const { match, authUser, aliasToId, respondFollowRequest } = this.props
     // console.log("Profile.handleTestClick()...")
-    console.log(e)
     e.preventDefault()
     // console.log(this.props) 
     // getMutualFollow(authUser.uid, 'F7G80ZQ0QffjiWtHT51tU8ztHRq1')
     const userId = aliasToId[match.params.user_alias]
     // rejectFollowRequest(userId) 
-    // acceptFollowRequest(userId)
-    getProfilePromise(userId).then(val=>console.log(val))
+    // respondFollowRequest(userId, true)
     // {userId && getProfilePromise(userId).then(profileData => console.log(`querying user ${userId} data!!!: `, profileData))}
   }
   componentDidMount() {
@@ -164,7 +166,7 @@ class Profile extends Component {
     if (authUser.loggedIn && !social.isFetching && (social.items.length < 1)) {
       const userId = aliasToId[userAlias]
       if (userId) {
-        console.log("GETTING MUTUAL FOLLOWERS!!!!!!!!!!")
+        // console.log("GETTING MUTUAL FOLLOWERS!!!!!!!!!!")
         getMutualFollowers(userId)
       }
     }
@@ -183,7 +185,16 @@ class Profile extends Component {
     let profileProps = {userAlias, isAuthUser}
     const profile = profiles[userId]
     if (profile) {
-      profileProps = {userAlias, isAuthUser, ...profile}
+      profileProps = {
+        isAuthUser,
+        aliasName: profile['alias_name'],
+        aliasImage: profile['alias_image'],
+        fullName: profile['full_name'],
+        bio: profile['bio'],
+        postsTotal: profile['posts_total'],
+        followersTotal: profile['followers_total'],
+        followingTotal: profile['following_total']
+      }
     }
     const socialItems = Object.values(social.items)
     const mutualFollowers = socialItems.filter(item => item.alias_name !== authUser.alias_name)
@@ -200,14 +211,12 @@ class Profile extends Component {
       const socialItem = (authUser.following && authUser.following[userId]) || {user_id: userId} //FIXME: This should be initialized with full user data! (Currently, data appears only when authed user is already following or after toggling the follow button.)
       // console.log(socialItem)
       const socialButton = (authUser.following && <SocialButton socialItem={socialItem} />)
-      const profilePhoto = <ProfilePhoto src={socialItem.alias_image} userAlias={userAlias} isAuthUser={isAuthUser} />
       return (
           <div>
             {true && <p><a href="#" onClick={this.handleTestClick}>Test!</a></p>}
             <ProfileHeader />
             <ProfilePage 
               socialButton={socialButton}
-              profilePhoto={profilePhoto}
               {...profileProps}
               {...this.props} 
             />
@@ -230,6 +239,7 @@ const mapDispatchToProps = (dispatch) => ({
   getMutualFollowers: userId => dispatch(getSocialItems(userId, "followers", true, false)),
   getUserDataFromAlias: aliasName => dispatch(getUserDataFromAlias(aliasName)),
   getUserCred: () => dispatch(getAuthUser()),
+  respondFollowRequest: (userId, accept) => dispatch(respondFollowRequest(userId, accept))
 })
  
 export default connect(
