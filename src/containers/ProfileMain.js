@@ -39,6 +39,9 @@ const ProfilePhoto = props => {
 const MutualFollowersList = props => {
   // const followers = Object.values(props.socialItems)
   // const followerNames =["lalal", "scout_berry", "anniegallos", "openstudiosvan", "someUser1", "someUser2"] // user.followers
+  if (props.socialItems.length === 0) {
+    return null
+  }
   const followerNames = props.socialItems.map(item => item.alias_name)
   // console.log(followerNames)
   const MAX = (followerNames.length < 3)? followerNames.length : 3
@@ -52,10 +55,6 @@ const MutualFollowersList = props => {
     }
     return (<span key={idx}>{followerName}</span>)
     })
-  
-  if (mutualFollowers.length === 0) {
-    return null
-  }
 
   const moreFollowersNum = (followerNames.length > MAX)? `+ ${followerNames.length - MAX} more` : null  
   // console.log(mutualFollowers)
@@ -163,10 +162,9 @@ class Profile extends Component {
     const { match, aliasToId, authUser, getMutualFollowers, social } = nextProps
     console.log(nextProps)
     const userAlias = match.params['user_alias']
-    if (authUser.loggedIn && !social.isFetching && (social.items.length < 1)) {
+    if (authUser.loggedIn && !social.isFetching && (Object.values(social.items).length < 1)) { //FIXME: Length is a not an approproate attribute here --- because could be empty!
       const userId = aliasToId[userAlias]
       if (userId) {
-        // console.log("GETTING MUTUAL FOLLOWERS!!!!!!!!!!")
         getMutualFollowers(userId)
       }
     }
@@ -176,7 +174,7 @@ class Profile extends Component {
 
   render() {
     const { match, authUser, aliasToId, social, profiles } = this.props
-    // console.log("!!!!! Profile.RENDER.... social!", this.props.social)
+    console.log("!!!!! Profile.RENDER")
     const aliasName = match.params['user_alias'] 
     const userAlias = match.params && match.params['user_alias']
     const userId = aliasToId[userAlias]
@@ -197,8 +195,10 @@ class Profile extends Component {
       }
     }
     const socialItems = Object.values(social.items)
-    const mutualFollowers = socialItems.filter(item => item.alias_name !== authUser.alias_name)
-    // console.log(socialItems)
+    const followers = socialItems.filter(item => {
+      return ((item.alias_name !== authUser.alias_name) && (item.status > 1))
+    })
+    const mutualFollowers = followers.filter(item => item.alias_name !== userAlias)
     profileProps['mutualFollowers'] = mutualFollowers
     if (social.isFetching || !(userAlias.toLowerCase() in aliasToId)) {
       return (
@@ -208,7 +208,7 @@ class Profile extends Component {
         </div>
       )
     } else {
-      const socialItem = (authUser.following && authUser.following[userId]) || {user_id: userId} //FIXME: This should be initialized with full user data! (Currently, data appears only when authed user is already following or after toggling the follow button.)
+      const socialItem = (authUser.following && authUser.following[userId]) || {user_id: userId}
       // console.log(socialItem)
       const socialButton = (authUser.following && <SocialButton socialItem={socialItem} />)
       return (

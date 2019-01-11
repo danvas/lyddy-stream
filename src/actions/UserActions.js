@@ -136,7 +136,7 @@ export function setupAuthUser() {
 export function getFollowing(userId) {
     return dispatch => {
       dispatch(requestUserData(`getFollowing('${userId}')`))
-      getSocialNetworkPromise(null, userId, "following", false, false, 1)
+      getSocialNetworkPromise(null, userId, "following", false, false)
       .then(members => {
         dispatch(receiveAuthFollowing(members))
         return members

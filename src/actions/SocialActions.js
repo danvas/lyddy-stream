@@ -232,12 +232,11 @@ export function getSocialItemPromise(userId, net) {
   })
 }
 
-// TODO: Refactor this -- it's horribly written.
-export function getSocialNetworkPromise(authUserId, userId, net, 
-  mutual=false, mutualOnly=false, statusLimit=FOLLOW_CODE) {
+// TODO: Rewrite this -- it's horribly written. 
+export function getSocialNetworkPromise(authUserId, userId, net, mutual=false, mutualOnly=false) {
   return new Promise((resolve, reject) => {
     let oncePromises = [database.child(`user_network/${userId}/${net}`).once('value')]
-    if (statusLimit >= FOLLOW_REQUEST_CODE) {
+    if (!mutual) {
       oncePromises.push(database.child(`user_network/${userId}/${net}_pending`).once('value'))
     }
     
@@ -245,7 +244,6 @@ export function getSocialNetworkPromise(authUserId, userId, net,
     .then(snaps => {
       let members = {}
       snaps.forEach(snap => members = {...members, ...snap.val()})
-      members = _.pickBy(members, (value, key) => value.status >= statusLimit)
       return members
     })
     .then(members => {
@@ -256,12 +254,14 @@ export function getSocialNetworkPromise(authUserId, userId, net,
           reject(`User authUserId not authenticated. Authenticate user first.`)
         }
         const userIds = Object.keys(members)
-        userIds.sort()
-        // console.log(userIds)
-        database.child(`user_network/${authUserId}/following`)
-        .once('value').then(snap => {
-          let following = snap.val() || {}
-          // console.log(following)
+        const onces = [
+          database.child(`user_network/${authUserId}/following`).once('value'),
+          database.child(`user_network/${authUserId}/following_pending`).once('value')
+        ]
+        Promise.all(onces)
+        .then(snaps => {
+          let following = {}
+          snaps.forEach(snap => following = {...following, ...snap.val()})
           following = _.pickBy(following, (value, key) => userIds.includes(key))
           if (!mutualOnly) {
             userIds.forEach(userId => {
@@ -270,7 +270,6 @@ export function getSocialNetworkPromise(authUserId, userId, net,
               }
             })
           }
-          // console.log(following)
           resolve(following)
         })
       }
@@ -278,17 +277,16 @@ export function getSocialNetworkPromise(authUserId, userId, net,
     .catch(err => reject(err.message))
   })
   .then(following => {
-    // console.log(following)
     return mergeProfileDataPromise(following)
   })
 }
 
-export function getSocialItems(userId, net, mutual=false, mutualOnly=false, statusLimit=FOLLOW_CODE) {
-  // console.log("*********** &&&& getSocialItems: ", userId, net, mutual, mutualOnly, statusLimit)
+export function getSocialItems(userId, net, mutual=false, mutualOnly=false) {
+  // console.log("*********** &&&& getSocialItems: ", userId, net, mutual, mutualOnly)
   const authUserId = auth.currentUser && auth.currentUser.uid
   return dispatch => {
     dispatch(requestSocialNetwork(`${userId}/${net}`))
-    getSocialNetworkPromise(authUserId, userId, net, mutual, mutualOnly, statusLimit)
+    getSocialNetworkPromise(authUserId, userId, net, mutual, mutualOnly)
     .then(items => {
       // console.log(items)
       dispatch(receiveSocialNetwork(userId, net, items))

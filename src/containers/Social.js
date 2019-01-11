@@ -60,7 +60,6 @@ class Social extends Component {
     const userId = user.aliasToId[user_alias]
     const net = match.params['social']
     // console.log(userId, social)
-    // getSocialNetwork(userId, social, false, false, 0)
     getMutualNetwork(userId, net)
   }
 
@@ -97,7 +96,6 @@ function mapStateToProps(state) {
 
 const mapDispatchToProps = dispatch => ({
   getMutualNetwork: (userId, net) => dispatch(getSocialItems(userId, net, true, false)),
-  getSocialNetwork: (userId, net, mutual, mutualOnly, statusLim) => dispatch(getSocialItems(userId, net, mutual, mutualOnly, statusLim)),
   getUserDataFromAlias: aliasName => dispatch(getUserDataFromAlias(aliasName)),
   getUserIdFromAlias: aliasName => dispatch(getUserIdFromAlias(aliasName)),
   getUserCred: () => dispatch(getAuthUser()),
